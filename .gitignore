@@ -5,7 +5,6 @@ projectfiles
 mbed-os
 BUILD
 
-compile_commands.json
 .clangd
 .cache
 serialbridge

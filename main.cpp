@@ -21,6 +21,10 @@
 
 #include "Mecanum.hpp"
 
+#include "pid.hpp"
+#include "md.hpp"
+#include "Encoder.hpp"
+
 Timer timer;
 double pre_timer = 0.01;
 
