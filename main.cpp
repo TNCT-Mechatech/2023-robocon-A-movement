@@ -46,23 +46,32 @@ uint32_t getMicrosecond() {
       .count();
 }
 
-SPI spi(PC_1, PB_14, PC_7);
-MbedHardwareSPI hardware_dev0(spi, PB_9);
+// mosi,miso,sck
+SPI spi(PB_15, PB_14, PB_13);
+MbedHardwareSPI hardware_dev0(spi, PB_12);
 ACAN2517FD dev0_can(hardware_dev0, getMillisecond);
 CANSerialBridge serial(&dev0_can);
 
 MDCClient mdc_client(&serial, 0);
 
-DigitalOut acknowledge_0(PC_8);
+DigitalOut acknowledge_0(PA_4);
 
 SerialDev *dev =
-    new MbedHardwareSerial(new BufferedSerial(PC_10, PC_11, 115200));
+  new MbedHardwareSerial(new BufferedSerial(PC_10, PC_11, 115200));
 SerialBridge serial_control(dev, 1024);
 Controller msc;
 
-DigitalOut led(PA_5);
+DigitalOut led(PA_10);
+
+DigitalOut led_(PA_5);
 
 MecanumWheel mw;
+
+Encoder *encoder[3];
+PID *pid[4];
+MD *md[4];
+
+void modules();
 
 /*
     [0] --→ 左前　 (FrontLeft)  [FL]
@@ -77,6 +86,8 @@ static uint32_t gSentDate = 0;
 int main() {
 
   serial_control.add_frame(0, &msc);
+
+  void modules();
 
   timer.start();
 
@@ -175,16 +186,22 @@ int main() {
 
     dev0_can.poll();
 
-    if (msc.was_updated()) {
+    
 
+    if (msc.was_updated()) {
       led = !led;
+      led_ = !led_;
+      
 
       // Joystickの値を取得(値域を±0.5から±1にする)
-      double joyXValue = (msc.data.x - 0.5) * 2;
-      double joyYValue = (msc.data.y - 0.5) * 2;
+      double joyLxValue = (msc.data.Lx - 0.5) * 2;
+      double joyLyValue = (msc.data.Ly - 0.5) * 2;
+      double joyRxValue = (msc.data.Rx - 0.5) * 2;
+      double joyRyValue = (msc.data.Ry - 0.5) * 2;
 
       uint32_t t_ = getMicrosecond();
 
+      /*
       if (joyXValue < 0.1 && joyXValue > -0.1) {
         joyXValue = 0;
       }
@@ -192,17 +209,14 @@ int main() {
       if (joyYValue < 0.1 && joyYValue > -0.1) {
         joyYValue = 0;
       }
+      */
 
       // ボタンの状態を取得(Lならマイナス,Rならプラス)
-      double turn = ((msc.data.l * 0.3) - (msc.data.r * 0.3));
-
-      if (msc.data.n == 1) {
-        turn = msc.data.r - msc.data.l;
-      }
+      double turn = msc.data.Rx;
 
       // Joystickのベクトル化
-      double targetSpeed = sqrt(joyXValue * joyXValue + joyYValue * joyYValue);
-      double targetRotation = atan2(joyYValue, joyXValue) - (PI / 4);
+      double targetSpeed = sqrt(joyLxValue * joyLxValue + joyLyValue * joyLyValue);
+      double targetRotation = atan2(joyLyValue, joyLxValue) - (PI / 4);
 
       // targetSpeedが1,-1を超えないようにする
       if (targetSpeed > 1) {
@@ -243,4 +257,25 @@ int main() {
     // 周期調整用 (ここを変えるならDELTA_Tも変える)
     // ThisThread::sleep_for(70ms);
   }
+}
+
+void modules()
+{
+// MD用PIDゲイン調整 {kp(比例), ki(積分), kd(微分), reverse(逆転)}
+    pid[0] = new PID(1.1, 0, 0, 0);
+    pid[1] = new PID(1.1, 0, 0, 0);
+    pid[2] = new PID(1.1, 0, 0, 0);
+    pid[3] = new PID(1.1, 0, 0, 0);
+
+// エンコーダーの制御ピン (a, b)
+    encoder[0] = new Encoder(PB_2, PB_10);
+    encoder[1] = new Encoder(PC_6, PC_7);
+    encoder[2] = new Encoder(PA_8, PA_9);
+
+// MDの制御ピン (pwmピン, dirピン, 逆転モード)
+    
+    md[0] = new MD(PC_9, PC_5, 0);
+    md[1] = new MD(PC_8, PC_4, 0);
+    md[2] = new MD(PA_0, PC_7, 0);
+    md[3] = new MD(PA_1, PC_6, 0);
 }
