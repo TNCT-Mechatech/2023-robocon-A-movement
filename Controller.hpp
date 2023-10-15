@@ -15,9 +15,10 @@ typedef struct ControllerType {
   bool triangle;
 
   bool L1;
-  bool L2;
   bool R1;
-  bool R2;
+  
+  double L2;
+  double R2;
 
   bool lc_up;
   bool lc_down;
