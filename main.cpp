@@ -21,9 +21,11 @@
 
 #include "Mecanum.hpp"
 
-#include "pid.hpp"
-#include "md.hpp"
 #include "Encoder.hpp"
+#include "md.hpp"
+#include "pid.hpp"
+
+#include "Servo.hpp"
 
 Timer timer;
 double pre_timer = 0.01;
@@ -53,23 +55,21 @@ ACAN2517FD dev0_can(hardware_dev0, getMillisecond);
 CANSerialBridge serial(&dev0_can);
 
 MDCClient mdc_client(&serial, 0);
+MDCClient mdc_client_2(&serial, 1);
 
 DigitalOut acknowledge_0(PA_4);
 
 SerialDev *dev =
-  new MbedHardwareSerial(new BufferedSerial(PC_10, PC_11, 115200));
+    new MbedHardwareSerial(new BufferedSerial(USBTX, USBRX, 115200));
 SerialBridge serial_control(dev, 1024);
 Controller msc;
-
-DigitalOut led(PA_10);
-
-DigitalOut led_(PA_5);
 
 MecanumWheel mw;
 
 Encoder *encoder[3];
-PID *pid[4];
+PID *pid[3];
 MD *md[4];
+Servo *servo[2];
 
 void modules();
 
@@ -171,6 +171,30 @@ int main() {
                                      0,
                                      0};
 
+  setting_struct_t mdc_settings_4 = {OperatorMode::PID_OPERATOR,
+                                     EncoderType::VELOCITY,
+                                     ENCODER_REVOLUTION,
+                                     false,
+                                     1.1,
+                                     0,
+                                     0,
+                                     0,
+                                     0,
+                                     0,
+                                     0};
+
+  setting_struct_t mdc_settings_5 = {OperatorMode::PID_OPERATOR,
+                                     EncoderType::VELOCITY,
+                                     ENCODER_REVOLUTION,
+                                     false,
+                                     1.1,
+                                     0,
+                                     0,
+                                     0,
+                                     0,
+                                     0,
+                                     0};
+
   mdc_client.update_setting(0, mdc_settings_0);
   wait_us(250 * 1000);
   mdc_client.update_setting(1, mdc_settings_1);
@@ -186,18 +210,22 @@ int main() {
 
     dev0_can.poll();
 
-    
+    if (mdc_client.update() || mdc_client_2.update()){
+      acknowledge_0 = !acknowledge_0;
+    }
 
     if (msc.was_updated()) {
-      led = !led;
-      led_ = !led_;
-      
 
       // Joystickの値を取得(値域を±0.5から±1にする)
-      double joyLxValue = (msc.data.Lx - 0.5) * 2;
-      double joyLyValue = (msc.data.Ly - 0.5) * 2;
-      double joyRxValue = (msc.data.Rx - 0.5) * 2;
-      double joyRyValue = (msc.data.Ry - 0.5) * 2;
+      // double joyLxValue = (msc.data.Lx - 0.5) * 2;
+      // double joyLyValue = (msc.data.Ly - 0.5) * 2;
+      // double joyRxValue = (msc.data.Rx - 0.5) * 2;
+      // double joyRyValue = (msc.data.Ry - 0.5) * 2;
+
+      double joyLxValue = msc.data.Lx;
+      double joyLyValue = msc.data.Ly;
+      double joyRxValue = msc.data.Rx;
+      double joyRyValue = msc.data.Ry;
 
       uint32_t t_ = getMicrosecond();
 
@@ -225,9 +253,9 @@ int main() {
         targetSpeed = -1;
       }
 
-      // targetSpeedが0.1以下の時に起動しないようにする
+      // targetSpeedが0.03以下の時に起動しないようにする
 
-      if (targetSpeed < 0.1 && targetSpeed > -0.1) {
+      if (targetSpeed < 0.03 && targetSpeed > -0.03) {
         targetSpeed = 0;
       }
 
@@ -250,7 +278,6 @@ int main() {
     }
 
     serial.update();
-    
 
     gSentDate = getMillisecond();
 
@@ -259,23 +286,26 @@ int main() {
   }
 }
 
-void modules()
-{
-// MD用PIDゲイン調整 {kp(比例), ki(積分), kd(微分), reverse(逆転)}
-    pid[0] = new PID(1.1, 0, 0, 0);
-    pid[1] = new PID(1.1, 0, 0, 0);
-    pid[2] = new PID(1.1, 0, 0, 0);
-    pid[3] = new PID(1.1, 0, 0, 0);
+void modules() {
+  // MD用PIDゲイン調整 {kp(比例), ki(積分), kd(微分), reverse(逆転)}
+  pid[0] = new PID(1.1, 0, 0, 0);
+  pid[1] = new PID(1.1, 0, 0, 0);
+  pid[2] = new PID(1.1, 0, 0, 0);
 
-// エンコーダーの制御ピン (a, b)
-    encoder[0] = new Encoder(PB_2, PB_10);
-    encoder[1] = new Encoder(PC_6, PC_7);
-    encoder[2] = new Encoder(PA_8, PA_9);
+  // エンコーダーの制御ピン (a, b)
+  encoder[0] = new Encoder(PB_2, PC_6);
+  encoder[1] = new Encoder(PB_10, PA_8);
+  encoder[2] = new Encoder(PA_9, PC_7);
 
-// MDの制御ピン (pwmピン, dirピン, 逆転モード)
-    
-    md[0] = new MD(PC_9, PC_5, 0);
-    md[1] = new MD(PC_8, PC_4, 0);
-    md[2] = new MD(PA_0, PC_7, 0);
-    md[3] = new MD(PA_1, PC_6, 0);
+  // MDの制御ピン (pwmピン, dirピン, 逆転モード)
+
+  md[0] = new MD(PC_9, PC_5, 0);
+  md[1] = new MD(PC_8, PC_4, 0);
+  md[2] = new MD(PA_0, PA_6, 0);
+  md[3] = new MD(PA_1, PA_7, 0);
+
+  // servo
+
+  servo[0] = new servo(PB_0, 0);
+  
 }
