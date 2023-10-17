@@ -31,6 +31,7 @@ Timer timer;
 double pre_timer = 0.01;
 
 #define ENCODER_REVOLUTION 1296
+#define OPERATOR_MODE MD_OPERATOR
 
 using namespace acan2517fd;
 
@@ -63,6 +64,8 @@ SerialDev *dev =
     new MbedHardwareSerial(new BufferedSerial(USBTX, USBRX, 115200));
 SerialBridge serial_control(dev, 1024);
 Controller msc;
+
+DigitalOut led(PA_5);
 
 MecanumWheel mw;
 
@@ -123,7 +126,7 @@ int main() {
 
   printf("all configuration completed!\n\r");
 
-  setting_struct_t mdc_settings_0 = {OperatorMode::PID_OPERATOR,
+  setting_struct_t mdc_settings_0 = {OperatorMode::MD_OPERATOR,
                                      EncoderType::VELOCITY,
                                      ENCODER_REVOLUTION,
                                      true,
@@ -135,7 +138,7 @@ int main() {
                                      0,
                                      0};
 
-  setting_struct_t mdc_settings_1 = {OperatorMode::PID_OPERATOR,
+  setting_struct_t mdc_settings_1 = {OperatorMode::MD_OPERATOR,
                                      EncoderType::VELOCITY,
                                      ENCODER_REVOLUTION,
                                      false,
@@ -147,7 +150,7 @@ int main() {
                                      0,
                                      0};
 
-  setting_struct_t mdc_settings_2 = {OperatorMode::PID_OPERATOR,
+  setting_struct_t mdc_settings_2 = {OperatorMode::MD_OPERATOR,
                                      EncoderType::VELOCITY,
                                      ENCODER_REVOLUTION,
                                      true,
@@ -159,7 +162,7 @@ int main() {
                                      0,
                                      0};
 
-  setting_struct_t mdc_settings_3 = {OperatorMode::PID_OPERATOR,
+  setting_struct_t mdc_settings_3 = {OperatorMode::MD_OPERATOR,
                                      EncoderType::VELOCITY,
                                      ENCODER_REVOLUTION,
                                      false,
@@ -171,7 +174,7 @@ int main() {
                                      0,
                                      0};
 
-  setting_struct_t mdc_settings_4 = {OperatorMode::PID_OPERATOR,
+  setting_struct_t mdc_settings_4 = {OperatorMode::MD_OPERATOR,
                                      EncoderType::VELOCITY,
                                      ENCODER_REVOLUTION,
                                      false,
@@ -183,7 +186,31 @@ int main() {
                                      0,
                                      0};
 
-  setting_struct_t mdc_settings_5 = {OperatorMode::PID_OPERATOR,
+  setting_struct_t mdc_settings_5 = {OperatorMode::MD_OPERATOR,
+                                     EncoderType::VELOCITY,
+                                     ENCODER_REVOLUTION,
+                                     false,
+                                     1.1,
+                                     0,
+                                     0,
+                                     0,
+                                     0,
+                                     0,
+                                     0};
+  
+  setting_struct_t mdc_settings_6 = {OperatorMode::MD_OPERATOR,
+                                     EncoderType::VELOCITY,
+                                     ENCODER_REVOLUTION,
+                                     false,
+                                     1.1,
+                                     0,
+                                     0,
+                                     0,
+                                     0,
+                                     0,
+                                     0};
+
+  setting_struct_t mdc_settings_7 = {OperatorMode::MD_OPERATOR,
                                      EncoderType::VELOCITY,
                                      ENCODER_REVOLUTION,
                                      false,
@@ -203,6 +230,14 @@ int main() {
   wait_us(250 * 1000);
   mdc_client.update_setting(3, mdc_settings_3);
   wait_us(250 * 1000);
+  mdc_client_2.update_setting(0, mdc_settings_4);
+  wait_us(250 * 1000);
+  mdc_client_2.update_setting(1, mdc_settings_5);
+  wait_us(250 * 1000);
+  mdc_client_2.update_setting(2, mdc_settings_6);
+  wait_us(250 * 1000);
+  mdc_client_2.update_setting(3, mdc_settings_7);
+  wait_us(250 * 1000);
 
   while (1) {
 
@@ -216,6 +251,8 @@ int main() {
 
     if (msc.was_updated()) {
 
+    led = !led;
+
       // Joystickの値を取得(値域を±0.5から±1にする)
       // double joyLxValue = (msc.data.Lx - 0.5) * 2;
       // double joyLyValue = (msc.data.Ly - 0.5) * 2;
@@ -226,6 +263,9 @@ int main() {
       double joyLyValue = msc.data.Ly;
       double joyRxValue = msc.data.Rx;
       double joyRyValue = msc.data.Ry;
+
+      double joyL2Value = msc.data.L2;
+      double joyR2Value = msc.data.R2;
 
       uint32_t t_ = getMicrosecond();
 
@@ -267,12 +307,19 @@ int main() {
       // 目標速度, 回転速度, 回転方向を設定
       mw.control(targetSpeed, targetRotation, turn);
 
+      
+
       // printf("%u\n\r", getMicrosecond() - t_);
 
       mdc_client.set_target(0, mw.getSpeed(0));
       mdc_client.set_target(1, mw.getSpeed(1));
       mdc_client.set_target(2, mw.getSpeed(2));
       mdc_client.set_target(3, mw.getSpeed(3));
+
+      mdc_client_2.set_target(0, joyL2Value);
+      mdc_client_2.set_target(1, joyR2Value);
+      mdc_client_2.set_target(2, 0);
+      mdc_client_2.set_target(3, 0);
 
       mdc_client.send_target();
     }
@@ -305,7 +352,6 @@ void modules() {
   md[3] = new MD(PA_1, PA_7, 0);
 
   // servo
-
-  servo[0] = new servo(PB_0, 0);
-  
+  servo[0] = new Servo(PB_0, 0);
+  servo[1] = new Servo(PB_6, 0);  
 }
