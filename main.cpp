@@ -322,6 +322,7 @@ int main() {
       mdc_client_2.set_target(3, 0);
 
       mdc_client.send_target();
+      mdc_client.send_target();
     }
 
     serial.update();
