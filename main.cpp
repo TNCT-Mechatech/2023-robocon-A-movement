@@ -307,6 +307,9 @@ int main() {
       // 目標速度, 回転速度, 回転方向を設定
       mw.control(targetSpeed, targetRotation, turn);
 
+      // 上部展開
+      double updown = ((msc.data.lc_up - msc.data.lc_down) * 0.5);
+
       
 
       // printf("%u\n\r", getMicrosecond() - t_);
@@ -319,10 +322,10 @@ int main() {
       mdc_client_2.set_target(0, joyL2Value);
       mdc_client_2.set_target(1, joyR2Value);
       mdc_client_2.set_target(2, 0);
-      mdc_client_2.set_target(3, 0);
+      mdc_client_2.set_target(3, updown);
 
       mdc_client.send_target();
-      mdc_client.send_target();
+      mdc_client_2.send_target();
     }
 
     serial.update();
