@@ -129,7 +129,7 @@ int main() {
   setting_struct_t mdc_settings_0 = {OperatorMode::MD_OPERATOR,
                                      EncoderType::VELOCITY,
                                      ENCODER_REVOLUTION,
-                                     true,
+                                     false,
                                      1.1,
                                      0,
                                      0,
@@ -141,7 +141,7 @@ int main() {
   setting_struct_t mdc_settings_1 = {OperatorMode::MD_OPERATOR,
                                      EncoderType::VELOCITY,
                                      ENCODER_REVOLUTION,
-                                     false,
+                                     true,
                                      1.1,
                                      0,
                                      0,
@@ -153,7 +153,7 @@ int main() {
   setting_struct_t mdc_settings_2 = {OperatorMode::MD_OPERATOR,
                                      EncoderType::VELOCITY,
                                      ENCODER_REVOLUTION,
-                                     true,
+                                     false,
                                      1.1,
                                      0,
                                      0,
@@ -165,7 +165,7 @@ int main() {
   setting_struct_t mdc_settings_3 = {OperatorMode::MD_OPERATOR,
                                      EncoderType::VELOCITY,
                                      ENCODER_REVOLUTION,
-                                     false,
+                                     true,
                                      1.1,
                                      0,
                                      0,
@@ -189,7 +189,7 @@ int main() {
   setting_struct_t mdc_settings_5 = {OperatorMode::MD_OPERATOR,
                                      EncoderType::VELOCITY,
                                      ENCODER_REVOLUTION,
-                                     false,
+                                     true,
                                      1.1,
                                      0,
                                      0,
@@ -280,7 +280,7 @@ int main() {
       */
 
       // ボタンの状態を取得(Lならマイナス,Rならプラス)
-      double turn = msc.data.Rx;
+      double turn = msc.data.Rx * -1;
 
       // Joystickのベクトル化
       double targetSpeed = sqrt(joyLxValue * joyLxValue + joyLyValue * joyLyValue);
@@ -308,7 +308,7 @@ int main() {
       mw.control(targetSpeed, targetRotation, turn);
 
       // 上部展開
-      double updown = ((msc.data.lc_up - msc.data.lc_down) * 0.5);
+      double updown = ((msc.data.triangle - msc.data.cross) * 0.5);
 
       
 
