@@ -222,6 +222,8 @@ int main() {
                                      0,
                                      0};
 
+  wait_us(2000 * 1000);
+
   mdc_client.update_setting(0, mdc_settings_0);
   wait_us(250 * 1000);
   mdc_client.update_setting(1, mdc_settings_1);
@@ -314,14 +316,16 @@ int main() {
 
       // printf("%u\n\r", getMicrosecond() - t_);
 
-      mdc_client.set_target(0, mw.getSpeed(0));
-      mdc_client.set_target(1, mw.getSpeed(1));
-      mdc_client.set_target(2, mw.getSpeed(2));
+      mdc_client.set_target(0, mw.getSpeed(4));
+      mdc_client.set_target(1, mw.getSpeed(2));
+      mdc_client.set_target(2, mw.getSpeed(1));
       mdc_client.set_target(3, mw.getSpeed(3));
 
       mdc_client_2.set_target(0, joyL2Value);
       mdc_client_2.set_target(1, joyR2Value);
-      mdc_client_2.set_target(2, 0);
+
+
+      mdc_client_2.set_target(2, updown);
       mdc_client_2.set_target(3, updown);
 
       mdc_client.send_target();
