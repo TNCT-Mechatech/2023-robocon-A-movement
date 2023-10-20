@@ -14,6 +14,7 @@
 #include "MbedHardwareSPI.h"
 
 #include "Controller.hpp"
+#include "DebugMessage.hpp"
 #include "MbedHardwareSerial.hpp"
 #include "SerialBridge.hpp"
 
@@ -64,6 +65,7 @@ SerialDev *dev =
     new MbedHardwareSerial(new BufferedSerial(USBTX, USBRX, 115200));
 SerialBridge serial_control(dev, 1024);
 Controller msc;
+DebugMessage debug_msg;
 
 DigitalOut led(PA_5);
 
@@ -73,6 +75,8 @@ Encoder *encoder[3];
 PID *pid[3];
 MD *md[4];
 Servo *servo[2];
+
+double c_1,c_2;
 
 void modules();
 
@@ -89,6 +93,7 @@ static uint32_t gSentDate = 0;
 int main() {
 
   serial_control.add_frame(0, &msc);
+  serial_control.add_frame(10, &debug_msg);
 
   void modules();
 
@@ -129,7 +134,7 @@ int main() {
   setting_struct_t mdc_settings_0 = {OperatorMode::MD_OPERATOR,
                                      EncoderType::VELOCITY,
                                      ENCODER_REVOLUTION,
-                                     false,
+                                     true,
                                      1.1,
                                      0,
                                      0,
@@ -141,7 +146,7 @@ int main() {
   setting_struct_t mdc_settings_1 = {OperatorMode::MD_OPERATOR,
                                      EncoderType::VELOCITY,
                                      ENCODER_REVOLUTION,
-                                     true,
+                                     false,
                                      1.1,
                                      0,
                                      0,
@@ -197,7 +202,7 @@ int main() {
                                      0,
                                      0,
                                      0};
-  
+
   setting_struct_t mdc_settings_6 = {OperatorMode::MD_OPERATOR,
                                      EncoderType::VELOCITY,
                                      ENCODER_REVOLUTION,
@@ -247,13 +252,13 @@ int main() {
 
     dev0_can.poll();
 
-    if (mdc_client.update() || mdc_client_2.update()){
+    if (mdc_client.update() || mdc_client_2.update()) {
       acknowledge_0 = !acknowledge_0;
     }
 
     if (msc.was_updated()) {
 
-    led = !led;
+      led = !led;
 
       // Joystickの値を取得(値域を±0.5から±1にする)
       // double joyLxValue = (msc.data.Lx - 0.5) * 2;
@@ -265,6 +270,9 @@ int main() {
       double joyLyValue = msc.data.Ly;
       double joyRxValue = msc.data.Rx;
       double joyRyValue = msc.data.Ry;
+
+      bool joyL1Value = msc.data.L1;
+      bool joyR1Value = msc.data.R1;
 
       double joyL2Value = msc.data.L2;
       double joyR2Value = msc.data.R2;
@@ -285,7 +293,8 @@ int main() {
       double turn = msc.data.Rx * -1;
 
       // Joystickのベクトル化
-      double targetSpeed = sqrt(joyLxValue * joyLxValue + joyLyValue * joyLyValue);
+      double targetSpeed =
+          sqrt(joyLxValue * joyLxValue + joyLyValue * joyLyValue);
       double targetRotation = atan2(joyLyValue, joyLxValue) - (PI / 4);
 
       // targetSpeedが1,-1を超えないようにする
@@ -312,24 +321,41 @@ int main() {
       // 上部展開
       double updown = ((msc.data.triangle - msc.data.cross) * 0.5);
 
-      
+      // キャタ逆転
+      if(joyL1Value == 1){
+        c_1 = joyL2Value * -1;
+      }else{
+        c_1 = joyL2Value;
+      }
+
+      if(joyR1Value == 1){
+        c_2 = joyR2Value * -1;
+      }else{
+        c_2 = joyR2Value;
+      }
+
+
 
       // printf("%u\n\r", getMicrosecond() - t_);
 
-      mdc_client.set_target(0, mw.getSpeed(4));
+      mdc_client.set_target(0, mw.getSpeed(3));
       mdc_client.set_target(1, mw.getSpeed(2));
       mdc_client.set_target(2, mw.getSpeed(1));
-      mdc_client.set_target(3, mw.getSpeed(3));
+      mdc_client.set_target(3, mw.getSpeed(0));
 
-      mdc_client_2.set_target(0, joyL2Value);
-      mdc_client_2.set_target(1, joyR2Value);
-
+      mdc_client_2.set_target(0, c_1);
+      mdc_client_2.set_target(1, c_2);
 
       mdc_client_2.set_target(2, updown);
       mdc_client_2.set_target(3, updown);
 
       mdc_client.send_target();
       mdc_client_2.send_target();
+
+      //  DEBUG
+      // memset(debug_msg.data.str, 0, 64);
+      // sprintf(debug_msg.data.str, "%.2lf",b);
+      // serial_control.write(10);
     }
 
     serial.update();
@@ -361,5 +387,5 @@ void modules() {
 
   // servo
   servo[0] = new Servo(PB_0, 0);
-  servo[1] = new Servo(PB_6, 0);  
+  servo[1] = new Servo(PB_6, 0);
 }
