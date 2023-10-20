@@ -32,7 +32,6 @@ Timer timer;
 double pre_timer = 0.01;
 
 #define ENCODER_REVOLUTION 1296
-#define OPERATOR_MODE MD_OPERATOR
 
 using namespace acan2517fd;
 
@@ -100,8 +99,7 @@ int main() {
   timer.start();
 
   //  set up
-  ACAN2517FDSettings settings(ACAN2517FDSettings::OSC_4MHz, 125UL * 1000UL,
-                              DataBitRateFactor::x8);
+  ACAN2517FDSettings settings(ACAN2517FDSettings::OSC_4MHz, 125UL * 1000UL, DataBitRateFactor::x8);
 
   settings.mRequestedMode = ACAN2517FDSettings::NormalFD;
 
@@ -204,7 +202,7 @@ int main() {
                                      0};
 
   setting_struct_t mdc_settings_6 = {OperatorMode::MD_OPERATOR,
-                                     EncoderType::VELOCITY,
+                                     EncoderType::ANGLE,
                                      ENCODER_REVOLUTION,
                                      false,
                                      1.1,
@@ -216,7 +214,7 @@ int main() {
                                      0};
 
   setting_struct_t mdc_settings_7 = {OperatorMode::MD_OPERATOR,
-                                     EncoderType::VELOCITY,
+                                     EncoderType::ANGLE,
                                      ENCODER_REVOLUTION,
                                      false,
                                      1.1,
@@ -261,10 +259,6 @@ int main() {
       led = !led;
 
       // Joystickの値を取得(値域を±0.5から±1にする)
-      // double joyLxValue = (msc.data.Lx - 0.5) * 2;
-      // double joyLyValue = (msc.data.Ly - 0.5) * 2;
-      // double joyRxValue = (msc.data.Rx - 0.5) * 2;
-      // double joyRyValue = (msc.data.Ry - 0.5) * 2;
 
       double joyLxValue = msc.data.Lx;
       double joyLyValue = msc.data.Ly;
@@ -276,6 +270,11 @@ int main() {
 
       double joyL2Value = msc.data.L2;
       double joyR2Value = msc.data.R2;
+
+      bool triangle = msc.data.triangle;
+      bool square = msc.data.square;
+      bool circle = msc.data.circle;
+      bool cross = msc.data.cross;
 
       uint32_t t_ = getMicrosecond();
 
@@ -290,7 +289,7 @@ int main() {
       */
 
       // ボタンの状態を取得(Lならマイナス,Rならプラス)
-      double turn = msc.data.Rx * -1;
+      double turn = joyRxValue * -1;
 
       // Joystickのベクトル化
       double targetSpeed =
@@ -318,8 +317,8 @@ int main() {
       // 目標速度, 回転速度, 回転方向を設定
       mw.control(targetSpeed, targetRotation, turn);
 
-      // 上部展開
-      double updown = ((msc.data.triangle - msc.data.cross) * 0.5);
+      // 上部展開(49)
+      double updown = (triangle - cross) * 49;
 
       // キャタ逆転
       if(joyL1Value == 1){
@@ -345,7 +344,6 @@ int main() {
 
       mdc_client_2.set_target(0, c_1);
       mdc_client_2.set_target(1, c_2);
-
       mdc_client_2.set_target(2, updown);
       mdc_client_2.set_target(3, updown);
 
