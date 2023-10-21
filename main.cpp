@@ -304,10 +304,10 @@ int main()
       movement_feedback_msg[0].data.target.d = getSpeed(0);
 
       //  set feedback value
-      movement_feedback_msg[0].data.feedback.a = mdc_client.feedback.data.node[0].velocity;
-      movement_feedback_msg[0].data.feedback.b = mdc_client.feedback.data.node[1].velocity;
-      movement_feedback_msg[0].data.feedback.c = mdc_client.feedback.data.node[2].velocity;
-      movement_feedback_msg[0].data.feedback.d = mdc_client.feedback.data.node[3].velocity;
+      movement_feedback_msg[0].data.output.a = mdc_client.feedback.data.node[0].velocity;
+      movement_feedback_msg[0].data.output.b = mdc_client.feedback.data.node[1].velocity;
+      movement_feedback_msg[0].data.output.c = mdc_client.feedback.data.node[2].velocity;
+      movement_feedback_msg[0].data.output.d = mdc_client.feedback.data.node[3].velocity;
 
       //  send
       serial_control.write(1);
@@ -326,10 +326,10 @@ int main()
       movement_feedback_msg[1].data.target.d = 0;
 
       //  set feedback value
-      movement_feedback_msg[1].data.feedback.a = mdc_client.feedback.data.node[0].velocity;
-      movement_feedback_msg[1].data.feedback.b = mdc_client.feedback.data.node[1].velocity;
-      movement_feedback_msg[1].data.feedback.c = mdc_client.feedback.data.node[2].angle;
-      movement_feedback_msg[1].data.feedback.d = mdc_client.feedback.data.node[3].angle;
+      movement_feedback_msg[1].data.output.a = mdc_client.feedback.data.node[0].velocity;
+      movement_feedback_msg[1].data.output.b = mdc_client.feedback.data.node[1].velocity;
+      movement_feedback_msg[1].data.output.c = mdc_client.feedback.data.node[2].angle;
+      movement_feedback_msg[1].data.output.d = mdc_client.feedback.data.node[3].angle;
 
       //  send
       serial_control.write(2);
