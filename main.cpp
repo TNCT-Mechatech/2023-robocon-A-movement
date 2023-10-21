@@ -16,6 +16,7 @@
 #include "Controller.hpp"
 #include "DebugMessage.hpp"
 #include "MovementFeeback.hpp"
+#include "PIDGain.hpp"
 #include "MbedHardwareSerial.hpp"
 #include "SerialBridge.hpp"
 
@@ -69,6 +70,7 @@ SerialBridge serial_control(dev, 1024);
 Controller msc;
 DebugMessage debug_msg;
 MovementFeedback movement_feedback_msg[2];
+PIDGain pid_gain_msg;
 
 DigitalOut led(PA_5);
 
@@ -104,7 +106,8 @@ int main()
   serial_control.add_frame(0, &msc);
   serial_control.add_frame(1, &movement_feedback_msg[0]);
   serial_control.add_frame(2, &movement_feedback_msg[1]);
-
+  serial_control.add_frame(3, &pid_gain_msg);
+  //  debug message instead of stdio
   serial_control.add_frame(10, &debug_msg);
 
   void modules();
@@ -145,119 +148,122 @@ int main()
 
   printf("all configuration completed!\n\r");
 
-  setting_struct_t mdc_settings_0 = {OperatorMode::MD_OPERATOR,
-                                     EncoderType::VELOCITY,
-                                     ENCODER_REVOLUTION,
-                                     true,
-                                     1.1,
-                                     0,
-                                     0,
-                                     0,
-                                     0,
-                                     0,
-                                     0};
-
-  setting_struct_t mdc_settings_1 = {OperatorMode::MD_OPERATOR,
-                                     EncoderType::VELOCITY,
-                                     ENCODER_REVOLUTION,
-                                     false,
-                                     1.1,
-                                     0,
-                                     0,
-                                     0,
-                                     0,
-                                     0,
-                                     0};
-
-  setting_struct_t mdc_settings_2 = {OperatorMode::MD_OPERATOR,
-                                     EncoderType::VELOCITY,
-                                     ENCODER_REVOLUTION,
-                                     false,
-                                     1.1,
-                                     0,
-                                     0,
-                                     0,
-                                     0,
-                                     0,
-                                     0};
-
-  setting_struct_t mdc_settings_3 = {OperatorMode::MD_OPERATOR,
-                                     EncoderType::VELOCITY,
-                                     ENCODER_REVOLUTION,
-                                     true,
-                                     1.1,
-                                     0,
-                                     0,
-                                     0,
-                                     0,
-                                     0,
-                                     0};
-
-  setting_struct_t mdc_settings_4 = {OperatorMode::MD_OPERATOR,
-                                     EncoderType::VELOCITY,
-                                     ENCODER_REVOLUTION,
-                                     false,
-                                     1.1,
-                                     0,
-                                     0,
-                                     0,
-                                     0,
-                                     0,
-                                     0};
-
-  setting_struct_t mdc_settings_5 = {OperatorMode::MD_OPERATOR,
-                                     EncoderType::VELOCITY,
-                                     ENCODER_REVOLUTION,
-                                     true,
-                                     1.1,
-                                     0,
-                                     0,
-                                     0,
-                                     0,
-                                     0,
-                                     0};
-
-  setting_struct_t mdc_settings_6 = {OperatorMode::MD_OPERATOR,
-                                     EncoderType::ANGLE,
-                                     ENCODER_REVOLUTION,
-                                     false,
-                                     1.1,
-                                     0,
-                                     0,
-                                     0,
-                                     0,
-                                     0,
-                                     0};
-
-  setting_struct_t mdc_settings_7 = {OperatorMode::MD_OPERATOR,
-                                     EncoderType::ANGLE,
-                                     ENCODER_REVOLUTION,
-                                     false,
-                                     1.1,
-                                     0,
-                                     0,
-                                     0,
-                                     0,
-                                     0,
-                                     0};
+  setting_struct_t mdc_settings = {
+      //  Azure 1 -> no.1
+      {OperatorMode::MD_OPERATOR,
+       EncoderType::VELOCITY,
+       ENCODER_REVOLUTION,
+       true,
+       1.1,
+       0,
+       0,
+       0,
+       0,
+       0,
+       0},
+      //  Azure 1 -> no.2
+      {OperatorMode::MD_OPERATOR,
+       EncoderType::VELOCITY,
+       ENCODER_REVOLUTION,
+       false,
+       1.1,
+       0,
+       0,
+       0,
+       0,
+       0,
+       0},
+      //  Azure 1 -> no.3
+      {OperatorMode::MD_OPERATOR,
+       EncoderType::VELOCITY,
+       ENCODER_REVOLUTION,
+       false,
+       1.1,
+       0,
+       0,
+       0,
+       0,
+       0,
+       0},
+      //  Azure 1 -> no.4
+      {OperatorMode::MD_OPERATOR,
+       EncoderType::VELOCITY,
+       ENCODER_REVOLUTION,
+       true,
+       1.1,
+       0,
+       0,
+       0,
+       0,
+       0,
+       0},
+      //////////////////
+      //  Azure 2 -> no.1
+      {OperatorMode::MD_OPERATOR,
+       EncoderType::VELOCITY,
+       ENCODER_REVOLUTION,
+       false,
+       1.1,
+       0,
+       0,
+       0,
+       0,
+       0,
+       0},
+      //  Azure 2 -> no.2
+      {OperatorMode::MD_OPERATOR,
+       EncoderType::VELOCITY,
+       ENCODER_REVOLUTION,
+       true,
+       1.1,
+       0,
+       0,
+       0,
+       0,
+       0,
+       0},
+      //  Azure 2 -> no.3
+      {OperatorMode::MD_OPERATOR,
+       EncoderType::ANGLE,
+       ENCODER_REVOLUTION,
+       false,
+       1.1,
+       0,
+       0,
+       0,
+       0,
+       0,
+       0},
+      //  Azure 2 -> no.4
+      {OperatorMode::MD_OPERATOR,
+       EncoderType::ANGLE,
+       ENCODER_REVOLUTION,
+       false,
+       1.1,
+       0,
+       0,
+       0,
+       0,
+       0,
+       0}};
 
   wait_us(2000 * 1000);
 
-  mdc_client.update_setting(0, mdc_settings_0);
+  mdc_client.update_setting(0, mdc_settings[0]);
   wait_us(250 * 1000);
-  mdc_client.update_setting(1, mdc_settings_1);
+  mdc_client.update_setting(1, mdc_settings[1]);
   wait_us(250 * 1000);
-  mdc_client.update_setting(2, mdc_settings_2);
+  mdc_client.update_setting(2, mdc_settings[2]);
   wait_us(250 * 1000);
-  mdc_client.update_setting(3, mdc_settings_3);
+  mdc_client.update_setting(3, mdc_settings[3]);
   wait_us(250 * 1000);
-  mdc_client_2.update_setting(0, mdc_settings_4);
+  mdc_client_2.update_setting(0, mdc_settings[4]);
   wait_us(250 * 1000);
-  mdc_client_2.update_setting(1, mdc_settings_5);
+  mdc_client_2.update_setting(1, mdc_settings[5]);
   wait_us(250 * 1000);
-  mdc_client_2.update_setting(2, mdc_settings_6);
+  mdc_client_2.update_setting(2, mdc_settings[6]);
   wait_us(250 * 1000);
-  mdc_client_2.update_setting(3, mdc_settings_7);
+  mdc_client_2.update_setting(3, mdc_settings[7]);
   wait_us(250 * 1000);
 
   while (1)
@@ -266,6 +272,28 @@ int main()
     serial_control.update();
 
     dev0_can.poll();
+
+    if (pid_gain_msg.was_update())
+    {
+      uint8_t id = pid_gain_msg.data.id;
+      if (0 <= id && id < 8)
+      {
+        //  update setting
+        mdc_settings[i].kp = pid_gain_msg.data.gain.kp;
+        mdc_settings[i].ki = pid_gain_msg.data.gain.ki;
+        mdc_settings[i].kd = pid_gain_msg.data.gain.kd;
+        mdc_settings[i].forward_gain = pid_gain_msg.data.gain.fg;
+
+        if (id < 4)
+        {
+          mdc_client.update_setting(i, mdc_settings[i]);
+        }
+        else
+        {
+          mdc_client_2.update_setting(i - 4, mdc_settings[i]);
+        }
+      }
+    }
 
     if (mdc_client.update())
     {
