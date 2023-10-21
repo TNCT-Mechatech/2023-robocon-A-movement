@@ -15,7 +15,7 @@
 
 #include "Controller.hpp"
 #include "DebugMessage.hpp"
-#include "MovementFeeback.hpp"
+#include "MovementFeedback.hpp"
 #include "PIDGain.hpp"
 #include "MbedHardwareSerial.hpp"
 #include "SerialBridge.hpp"
@@ -148,7 +148,7 @@ int main()
 
   printf("all configuration completed!\n\r");
 
-  setting_struct_t mdc_settings = {
+  setting_struct_t mdc_settings[8] = {
       //  Azure 1 -> no.1
       {OperatorMode::MD_OPERATOR,
        EncoderType::VELOCITY,
@@ -273,24 +273,24 @@ int main()
 
     dev0_can.poll();
 
-    if (pid_gain_msg.was_update())
+    if (pid_gain_msg.was_updated())
     {
       uint8_t id = pid_gain_msg.data.id;
       if (0 <= id && id < 8)
       {
         //  update setting
-        mdc_settings[i].kp = pid_gain_msg.data.gain.kp;
-        mdc_settings[i].ki = pid_gain_msg.data.gain.ki;
-        mdc_settings[i].kd = pid_gain_msg.data.gain.kd;
-        mdc_settings[i].forward_gain = pid_gain_msg.data.gain.fg;
+        mdc_settings[id].kp = pid_gain_msg.data.gain.kp;
+        mdc_settings[id].ki = pid_gain_msg.data.gain.ki;
+        mdc_settings[id].kd = pid_gain_msg.data.gain.kd;
+        mdc_settings[id].forward_gain = pid_gain_msg.data.gain.fg;
 
         if (id < 4)
         {
-          mdc_client.update_setting(i, mdc_settings[i]);
+          mdc_client.update_setting(id, mdc_settings[id]);
         }
         else
         {
-          mdc_client_2.update_setting(i - 4, mdc_settings[i]);
+          mdc_client_2.update_setting(id - 4, mdc_settings[id]);
         }
       }
     }
@@ -298,10 +298,10 @@ int main()
     if (mdc_client.update())
     {
       //  set target value
-      movement_feedback_msg[0].data.target.a = getSpeed(3);
-      movement_feedback_msg[0].data.target.b = getSpeed(2);
-      movement_feedback_msg[0].data.target.c = getSpeed(1);
-      movement_feedback_msg[0].data.target.d = getSpeed(0);
+      movement_feedback_msg[0].data.target.a = mw.getSpeed(3);
+      movement_feedback_msg[0].data.target.b = mw.getSpeed(2);
+      movement_feedback_msg[0].data.target.c = mw.getSpeed(1);
+      movement_feedback_msg[0].data.target.d = mw.getSpeed(0);
 
       //  set feedback value
       movement_feedback_msg[0].data.output.a = mdc_client.feedback.data.node[0].velocity;
@@ -363,22 +363,11 @@ int main()
 
       uint32_t t_ = getMicrosecond();
 
-      /*
-      if (joyXValue < 0.1 && joyXValue > -0.1) {
-        joyXValue = 0;
-      }
-
-      if (joyYValue < 0.1 && joyYValue > -0.1) {
-        joyYValue = 0;
-      }
-      */
-
       // ボタンの状態を取得(Lならマイナス,Rならプラス)
       double turn = joyRxValue * -1;
 
       // Joystickのベクトル化
-      double targetSpeed =
-          sqrt(joyLxValue * joyLxValue + joyLyValue * joyLyValue);
+      double targetSpeed = sqrt(joyLxValue * joyLxValue + joyLyValue * joyLyValue);
       double targetRotation = atan2(joyLyValue, joyLxValue) - (PI / 4);
 
       // targetSpeedが1,-1を超えないようにする
@@ -471,14 +460,14 @@ void modules()
   encoder[1] = new Encoder(PB_10, PA_8);
   encoder[2] = new Encoder(PA_9, PC_7);
 
-  // MDの制御ピン (pwmピン, dirピン, 逆転モード)
+  // MDの制御ピン (PWMピン, DIRピン, 逆転モード)
 
   md[0] = new MD(PC_9, PC_5, 0);
   md[1] = new MD(PC_8, PC_4, 0);
   md[2] = new MD(PA_0, PA_6, 0);
   md[3] = new MD(PA_1, PA_7, 0);
 
-  // servo
+  // servo (PWMピン, 逆転モード)
   servo[0] = new Servo(PB_0, 0);
   servo[1] = new Servo(PB_6, 0);
 }
