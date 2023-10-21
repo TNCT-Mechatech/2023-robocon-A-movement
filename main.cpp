@@ -15,6 +15,7 @@
 
 #include "Controller.hpp"
 #include "DebugMessage.hpp"
+#include "MovementFeeback.hpp"
 #include "MbedHardwareSerial.hpp"
 #include "SerialBridge.hpp"
 
@@ -37,13 +38,15 @@ using namespace acan2517fd;
 
 const double PI = 3.1415;
 
-uint32_t getMillisecond() {
+uint32_t getMillisecond()
+{
   return (uint32_t)duration_cast<std::chrono::milliseconds>(
              timer.elapsed_time())
       .count();
 }
 
-uint32_t getMicrosecond() {
+uint32_t getMicrosecond()
+{
   return (uint32_t)duration_cast<std::chrono::microseconds>(
              timer.elapsed_time())
       .count();
@@ -65,6 +68,7 @@ SerialDev *dev =
 SerialBridge serial_control(dev, 1024);
 Controller msc;
 DebugMessage debug_msg;
+MovementFeedback movement_feedback_msg[2];
 
 DigitalOut led(PA_5);
 
@@ -75,7 +79,7 @@ PID *pid[3];
 MD *md[4];
 Servo *servo[2];
 
-double c_1,c_2;
+double c_1, c_2;
 
 void modules();
 
@@ -89,9 +93,18 @@ void modules();
 static uint32_t gUpdateDate = 0;
 static uint32_t gSentDate = 0;
 
-int main() {
+inline void toggleAcknowledge()
+{
+  acknowledge_0 = !acknowledge_0;
+}
+
+int main()
+{
 
   serial_control.add_frame(0, &msc);
+  serial_control.add_frame(1, &movement_feedback_msg[0]);
+  serial_control.add_frame(2, &movement_feedback_msg[1]);
+
   serial_control.add_frame(10, &debug_msg);
 
   void modules();
@@ -121,9 +134,12 @@ int main() {
 
   printf("initializing device 0...\n\r");
   const uint32_t errorCode0 = dev0_can.begin(settings);
-  if (errorCode0 == 0) {
+  if (errorCode0 == 0)
+  {
     printf("initialized device 0!\n\r");
-  } else {
+  }
+  else
+  {
     printf("Configuration error 0x%x\n\r", errorCode0);
   }
 
@@ -244,17 +260,58 @@ int main() {
   mdc_client_2.update_setting(3, mdc_settings_7);
   wait_us(250 * 1000);
 
-  while (1) {
+  while (1)
+  {
 
     serial_control.update();
 
     dev0_can.poll();
 
-    if (mdc_client.update() || mdc_client_2.update()) {
-      acknowledge_0 = !acknowledge_0;
+    if (mdc_client.update())
+    {
+      //  set target value
+      movement_feedback_msg[0].data.target.a = getSpeed(3);
+      movement_feedback_msg[0].data.target.b = getSpeed(2);
+      movement_feedback_msg[0].data.target.c = getSpeed(1);
+      movement_feedback_msg[0].data.target.d = getSpeed(0);
+
+      //  set feedback value
+      movement_feedback_msg[0].data.feedback.a = mdc_client.feedback.data.node[0].velocity;
+      movement_feedback_msg[0].data.feedback.b = mdc_client.feedback.data.node[1].velocity;
+      movement_feedback_msg[0].data.feedback.c = mdc_client.feedback.data.node[2].velocity;
+      movement_feedback_msg[0].data.feedback.d = mdc_client.feedback.data.node[3].velocity;
+
+      //  send
+      serial_control.write(1);
+
+      //  toggle led
+      toggleAcknowledge();
     }
 
-    if (msc.was_updated()) {
+    if (mdc_client_2.update())
+    {
+      //  set target value
+      movement_feedback_msg[1].data.target.a = c_1;
+      movement_feedback_msg[1].data.target.b = c_2;
+      //  todo replace here
+      movement_feedback_msg[1].data.target.c = 0;
+      movement_feedback_msg[1].data.target.d = 0;
+
+      //  set feedback value
+      movement_feedback_msg[1].data.feedback.a = mdc_client.feedback.data.node[0].velocity;
+      movement_feedback_msg[1].data.feedback.b = mdc_client.feedback.data.node[1].velocity;
+      movement_feedback_msg[1].data.feedback.c = mdc_client.feedback.data.node[2].angle;
+      movement_feedback_msg[1].data.feedback.d = mdc_client.feedback.data.node[3].angle;
+
+      //  send
+      serial_control.write(2);
+
+      //  toggle led
+      toggleAcknowledge();
+    }
+
+    if (msc.was_updated())
+    {
 
       led = !led;
 
@@ -297,20 +354,25 @@ int main() {
       double targetRotation = atan2(joyLyValue, joyLxValue) - (PI / 4);
 
       // targetSpeedが1,-1を超えないようにする
-      if (targetSpeed > 1) {
+      if (targetSpeed > 1)
+      {
         targetSpeed = 1;
-      } else if (targetSpeed < -1) {
+      }
+      else if (targetSpeed < -1)
+      {
         targetSpeed = -1;
       }
 
       // targetSpeedが0.03以下の時に起動しないようにする
 
-      if (targetSpeed < 0.03 && targetSpeed > -0.03) {
+      if (targetSpeed < 0.03 && targetSpeed > -0.03)
+      {
         targetSpeed = 0;
       }
 
       // targetRotationがマイナスにならないように2πたす
-      if (targetRotation < 0) {
+      if (targetRotation < 0)
+      {
         targetRotation += (2 * PI);
       }
 
@@ -321,19 +383,23 @@ int main() {
       double updown = (triangle - cross) * 49;
 
       // キャタ逆転
-      if(joyL1Value == 1){
+      if (joyL1Value == 1)
+      {
         c_1 = joyL2Value * -1;
-      }else{
+      }
+      else
+      {
         c_1 = joyL2Value;
       }
 
-      if(joyR1Value == 1){
+      if (joyR1Value == 1)
+      {
         c_2 = joyR2Value * -1;
-      }else{
+      }
+      else
+      {
         c_2 = joyR2Value;
       }
-
-
 
       // printf("%u\n\r", getMicrosecond() - t_);
 
@@ -365,7 +431,8 @@ int main() {
   }
 }
 
-void modules() {
+void modules()
+{
   // MD用PIDゲイン調整 {kp(比例), ki(積分), kd(微分), reverse(逆転)}
   pid[0] = new PID(1.1, 0, 0, 0);
   pid[1] = new PID(1.1, 0, 0, 0);
