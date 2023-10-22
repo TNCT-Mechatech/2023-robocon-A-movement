@@ -33,7 +33,7 @@
 Timer timer;
 double pre_timer = 0.01;
 
-#define ENCODER_REVOLUTION 1296
+#define ENCODER_REVOLUTION 4647
 
 using namespace acan2517fd;
 
@@ -149,6 +149,67 @@ int main()
   printf("all configuration completed!\n\r");
 
   setting_struct_t mdc_settings[8] = {
+      //  Azure 0 -> no.0
+      {OperatorMode::PID_OPERATOR,
+       EncoderType::VELOCITY,
+       ENCODER_REVOLUTION,
+       false,
+       1.7,
+       0,
+       0,
+       0,
+       0,
+       0,
+       0},
+      //  Azure 0 -> no.1
+      {OperatorMode::PID_OPERATOR,
+       EncoderType::VELOCITY,
+       ENCODER_REVOLUTION,
+       false,
+       1.9,
+       0,
+       0,
+       0,
+       0,
+       0,
+       0},
+      //  Azure 0 -> no.2
+      {OperatorMode::PID_OPERATOR,
+       EncoderType::VELOCITY,
+       ENCODER_REVOLUTION,
+       false,
+       1.8,
+       0,
+       0,
+       0,
+       0,
+       0,
+       0},
+      //  Azure 0 -> no.3
+      {OperatorMode::PID_OPERATOR,
+       EncoderType::VELOCITY,
+       ENCODER_REVOLUTION,
+       false,
+       1.9,
+       0,
+       0,
+       0,
+       0,
+       0,
+       0},
+      //////////////////
+      //  Azure 1 -> no.0
+      {OperatorMode::MD_OPERATOR,
+       EncoderType::VELOCITY,
+       ENCODER_REVOLUTION,
+       false,
+       1.1,
+       0,
+       0,
+       0,
+       0,
+       0,
+       0},
       //  Azure 1 -> no.1
       {OperatorMode::MD_OPERATOR,
        EncoderType::VELOCITY,
@@ -162,68 +223,7 @@ int main()
        0,
        0},
       //  Azure 1 -> no.2
-      {OperatorMode::MD_OPERATOR,
-       EncoderType::VELOCITY,
-       ENCODER_REVOLUTION,
-       false,
-       1.1,
-       0,
-       0,
-       0,
-       0,
-       0,
-       0},
-      //  Azure 1 -> no.3
-      {OperatorMode::MD_OPERATOR,
-       EncoderType::VELOCITY,
-       ENCODER_REVOLUTION,
-       false,
-       1.1,
-       0,
-       0,
-       0,
-       0,
-       0,
-       0},
-      //  Azure 1 -> no.4
-      {OperatorMode::MD_OPERATOR,
-       EncoderType::VELOCITY,
-       ENCODER_REVOLUTION,
-       true,
-       1.1,
-       0,
-       0,
-       0,
-       0,
-       0,
-       0},
-      //////////////////
-      //  Azure 2 -> no.1
-      {OperatorMode::MD_OPERATOR,
-       EncoderType::VELOCITY,
-       ENCODER_REVOLUTION,
-       false,
-       1.1,
-       0,
-       0,
-       0,
-       0,
-       0,
-       0},
-      //  Azure 2 -> no.2
-      {OperatorMode::MD_OPERATOR,
-       EncoderType::VELOCITY,
-       ENCODER_REVOLUTION,
-       true,
-       1.1,
-       0,
-       0,
-       0,
-       0,
-       0,
-       0},
-      //  Azure 2 -> no.3
-      {OperatorMode::MD_OPERATOR,
+      {OperatorMode::NO_OPERATOR,
        EncoderType::ANGLE,
        ENCODER_REVOLUTION,
        false,
@@ -234,8 +234,8 @@ int main()
        0,
        0,
        0},
-      //  Azure 2 -> no.4
-      {OperatorMode::MD_OPERATOR,
+      //  Azure 1 -> no.3
+      {OperatorMode::NO_OPERATOR,
        EncoderType::ANGLE,
        ENCODER_REVOLUTION,
        false,
@@ -292,6 +292,11 @@ int main()
         {
           mdc_client_2.update_setting(id - 4, mdc_settings[id]);
         }
+
+        // DEBUG
+        memset(debug_msg.data.str, 0, 64);
+        sprintf(debug_msg.data.str, "gain: %d",id);
+        serial_control.write(10);
       }
     }
 
@@ -343,7 +348,7 @@ int main()
 
       led = !led;
 
-      // Joystickの値を取得(値域を±0.5から±1にする)
+      // Joystickの値を取得(値域を+0.5から±1にする)
 
       double joyLxValue = msc.data.Lx;
       double joyLyValue = msc.data.Ly;
@@ -394,7 +399,7 @@ int main()
       }
 
       // 目標速度, 回転速度, 回転方向を設定
-      mw.control(targetSpeed, targetRotation, turn);
+      mw.control(targetSpeed * 2, targetRotation, turn);
 
       // 上部展開(49)
       double updown = (triangle - cross) * 49;
@@ -420,9 +425,11 @@ int main()
 
       // printf("%u\n\r", getMicrosecond() - t_);
 
-      mdc_client.set_target(0, mw.getSpeed(3));
+    
+
+      mdc_client.set_target(0, mw.getSpeed(3) * -1);
       mdc_client.set_target(1, mw.getSpeed(2));
-      mdc_client.set_target(2, mw.getSpeed(1));
+      mdc_client.set_target(2, mw.getSpeed(1) * -1);
       mdc_client.set_target(3, mw.getSpeed(0));
 
       mdc_client_2.set_target(0, c_1);
@@ -433,10 +440,7 @@ int main()
       mdc_client.send_target();
       mdc_client_2.send_target();
 
-      //  DEBUG
-      // memset(debug_msg.data.str, 0, 64);
-      // sprintf(debug_msg.data.str, "%.2lf",b);
-      // serial_control.write(10);
+
     }
 
     serial.update();
