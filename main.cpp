@@ -23,12 +23,14 @@
 #include "mdc_client/MDCClient.hpp"
 
 #include "Mecanum.hpp"
+#include "Servo.hpp"
+#include "SpeedController.hpp"
 
 #include "Encoder.hpp"
 #include "md.hpp"
 #include "pid.hpp"
 
-#include "Servo.hpp"
+
 
 Timer timer;
 double pre_timer = 0.01;
@@ -78,6 +80,7 @@ Encoder *encoder[3];
 PID *pid[3];
 MD *md[4];
 Servo *servo[2];
+SpeedController *sc[8];
 setting_struct_t *mdc_settings[8];
 
 double c_1, c_2;
@@ -251,50 +254,45 @@ int main() {
       double turn = joyRxValue * -1;
 
       // Joystickのベクトル化
-      double targetSpeed = sqrt(joyLxValue * joyLxValue + joyLyValue * joyLyValue);
-      double targetRotation = atan2(joyLyValue, joyLxValue) - (PI / 4);
+      double joySpeed = sqrt(joyLxValue * joyLxValue + joyLyValue * joyLyValue);
+      double joyRotation = atan2(joyLyValue, joyLxValue) - (PI / 4);
 
       // targetSpeedが1,-1を超えないようにする
-      if (targetSpeed > 1) {
-        targetSpeed = 1;
-      } else if (targetSpeed < -1) {
-        targetSpeed = -1;
+      if (joySpeed > 1) {
+        joySpeed = 1;
+      } else if (joySpeed < -1) {
+        joySpeed = -1;
       }
 
       // targetSpeedが0.03以下の時に起動しないようにする
 
-      if (targetSpeed < 0.03 && targetSpeed > -0.03) {
-        targetSpeed = 0;
+      if (joySpeed < 0.03 && joySpeed > -0.03) {
+        joySpeed = 0;
       }
 
       // targetRotationがマイナスにならないように2πたす
-      if (targetRotation < 0) {
-        targetRotation += (2 * PI);
+      if (joyRotation < 0) {
+        joyRotation += (2 * PI);
       }
 
       // 目標速度, 回転速度, 回転方向を設定
-      mw.control(targetSpeed * 2, targetRotation, turn);
+      mw.control(joySpeed * 2, joyRotation, turn);
 
       // 上部展開(49)
       double updown = (triangle - cross) * 49;
 
-      // キャタ逆転
-      if (joyL1Value == 1) {
-        c_1 = joyL2Value * -1;
-      } else {
-        c_1 = joyL2Value;
-      }
+      sc[0]->drive(mw.getSpeed(3), true);
+      sc[1]->drive(mw.getSpeed(2), false);
+      sc[2]->drive(mw.getSpeed(1), true);
+      sc[3]->drive(mw.getSpeed(0), false);
 
-      if (joyR1Value == 1) {
-        c_2 = joyR2Value * -1;
-      } else {
-        c_2 = joyR2Value;
-      }
+      sc[4]->drive(joyL2Value, joyL1Value);
+      sc[5]->drive(joyR2Value, joyR1Value);
 
-      mdc_client.set_target(0, mw.getSpeed(3) * -1);
-      mdc_client.set_target(1, mw.getSpeed(2));
-      mdc_client.set_target(2, mw.getSpeed(1) * -1);
-      mdc_client.set_target(3, mw.getSpeed(0));
+      mdc_client.set_target(0, sc[0]->return_Speed());
+      mdc_client.set_target(1, sc[1]->return_Speed());
+      mdc_client.set_target(2, sc[2]->return_Speed());
+      mdc_client.set_target(3, sc[3]->return_Speed());
 
       mdc_client_2.set_target(0, c_1);
       mdc_client_2.set_target(1, c_2);
@@ -316,8 +314,7 @@ int main() {
 
 void modules() {
   //  Azusa 0 -> no.0
-  mdc_settings[0] =
-    {
+  mdc_settings[0] = {
     OperatorMode::PID_OPERATOR,
     EncoderType::VELOCITY,
     ENCODER_REVOLUTION,
@@ -330,8 +327,7 @@ void modules() {
     0,
     0};
   //  Azusa 0 -> no.1
-  mdc_settings[1] =
-    {
+  mdc_settings[1] = {
     OperatorMode::PID_OPERATOR,
     EncoderType::VELOCITY,
     ENCODER_REVOLUTION,
@@ -423,6 +419,17 @@ void modules() {
     0,
     0,
     0};
+
+  // 台形加速
+  sc[0] = new SpeedController(0.01);
+  sc[1] = new SpeedController(0.01);
+  sc[2] = new SpeedController(0.01);
+  sc[3] = new SpeedController(0.01);
+  sc[4] = new SpeedController(0.01);
+  sc[5] = new SpeedController(0.01);
+  sc[6] = new SpeedController(0.01);
+  sc[7] = new SpeedController(0.01);
+
 
   // MD用PIDゲイン調整 {kp(比例), ki(積分), kd(微分), reverse(逆転)}
   pid[0] = new PID(1.1, 0, 0, 0);
