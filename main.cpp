@@ -39,18 +39,16 @@ using namespace acan2517fd;
 
 const double PI = 3.1415;
 
-uint32_t getMillisecond()
-{
-  return (uint32_t)duration_cast<std::chrono::milliseconds>(
-             timer.elapsed_time())
-      .count();
+uint32_t getMillisecond() {
+  return (uint32_t) duration_cast<std::chrono::milliseconds>(
+    timer.elapsed_time())
+    .count();
 }
 
-uint32_t getMicrosecond()
-{
-  return (uint32_t)duration_cast<std::chrono::microseconds>(
-             timer.elapsed_time())
-      .count();
+uint32_t getMicrosecond() {
+  return (uint32_t) duration_cast<std::chrono::microseconds>(
+    timer.elapsed_time())
+    .count();
 }
 
 // mosi,miso,sck
@@ -65,7 +63,7 @@ MDCClient mdc_client_2(&serial, 1);
 DigitalOut acknowledge_0(PA_4);
 
 SerialDev *dev =
-    new MbedHardwareSerial(new BufferedSerial(USBTX, USBRX, 115200));
+  new MbedHardwareSerial(new BufferedSerial(USBTX, USBRX, 115200));
 SerialBridge serial_control(dev, 1024);
 Controller msc;
 DebugMessage debug_msg;
@@ -80,28 +78,20 @@ Encoder *encoder[3];
 PID *pid[3];
 MD *md[4];
 Servo *servo[2];
+setting_struct_t *mdc_settings[8];
 
 double c_1, c_2;
 
 void modules();
 
-/*
-    [0] --→ 左前　 (FrontLeft)  [FL]
-    [1] --→ 右前　 (FrontRight) [FR]
-    [2] --→ 左後ろ (RearLeft)   [RL]
-    [3] --→ 右後ろ (RearRight)  [RR]
-*/
-
 static uint32_t gUpdateDate = 0;
 static uint32_t gSentDate = 0;
 
-inline void toggleAcknowledge()
-{
+inline void toggleAcknowledge() {
   acknowledge_0 = !acknowledge_0;
 }
 
-int main()
-{
+int main() {
 
   serial_control.add_frame(0, &msc);
   serial_control.add_frame(1, &movement_feedback_msg[0]);
@@ -109,8 +99,6 @@ int main()
   serial_control.add_frame(3, &pid_gain_msg);
   //  debug message instead of stdio
   serial_control.add_frame(10, &debug_msg);
-
-  void modules();
 
   timer.start();
 
@@ -137,115 +125,15 @@ int main()
 
   printf("initializing device 0...\n\r");
   const uint32_t errorCode0 = dev0_can.begin(settings);
-  if (errorCode0 == 0)
-  {
+  if (errorCode0 == 0) {
     printf("initialized device 0!\n\r");
-  }
-  else
-  {
+  } else {
     printf("Configuration error 0x%x\n\r", errorCode0);
   }
 
   printf("all configuration completed!\n\r");
 
-  setting_struct_t mdc_settings[8] = {
-      //  Azure 0 -> no.0
-      {OperatorMode::PID_OPERATOR,
-       EncoderType::VELOCITY,
-       ENCODER_REVOLUTION,
-       false,
-       1.7,
-       0,
-       0,
-       0,
-       0,
-       0,
-       0},
-      //  Azure 0 -> no.1
-      {OperatorMode::PID_OPERATOR,
-       EncoderType::VELOCITY,
-       ENCODER_REVOLUTION,
-       false,
-       1.9,
-       0,
-       0,
-       0,
-       0,
-       0,
-       0},
-      //  Azure 0 -> no.2
-      {OperatorMode::PID_OPERATOR,
-       EncoderType::VELOCITY,
-       ENCODER_REVOLUTION,
-       false,
-       1.8,
-       0,
-       0,
-       0,
-       0,
-       0,
-       0},
-      //  Azure 0 -> no.3
-      {OperatorMode::PID_OPERATOR,
-       EncoderType::VELOCITY,
-       ENCODER_REVOLUTION,
-       false,
-       1.9,
-       0,
-       0,
-       0,
-       0,
-       0,
-       0},
-      //////////////////
-      //  Azure 1 -> no.0
-      {OperatorMode::MD_OPERATOR,
-       EncoderType::VELOCITY,
-       ENCODER_REVOLUTION,
-       false,
-       1.1,
-       0,
-       0,
-       0,
-       0,
-       0,
-       0},
-      //  Azure 1 -> no.1
-      {OperatorMode::MD_OPERATOR,
-       EncoderType::VELOCITY,
-       ENCODER_REVOLUTION,
-       true,
-       1.1,
-       0,
-       0,
-       0,
-       0,
-       0,
-       0},
-      //  Azure 1 -> no.2
-      {OperatorMode::NO_OPERATOR,
-       EncoderType::ANGLE,
-       ENCODER_REVOLUTION,
-       false,
-       1.1,
-       0,
-       0,
-       0,
-       0,
-       0,
-       0},
-      //  Azure 1 -> no.3
-      {OperatorMode::NO_OPERATOR,
-       EncoderType::ANGLE,
-       ENCODER_REVOLUTION,
-       false,
-       1.1,
-       0,
-       0,
-       0,
-       0,
-       0,
-       0}};
+  void modules();
 
   wait_us(2000 * 1000);
 
@@ -266,42 +154,35 @@ int main()
   mdc_client_2.update_setting(3, mdc_settings[7]);
   wait_us(250 * 1000);
 
-  while (1)
-  {
+  while (1) {
 
     serial_control.update();
 
     dev0_can.poll();
 
-    if (pid_gain_msg.was_updated())
-    {
+    if (pid_gain_msg.was_updated()) {
       uint8_t id = pid_gain_msg.data.id;
-      if (0 <= id && id < 8)
-      {
+      if (0 <= id && id < 8) {
         //  update setting
         mdc_settings[id].kp = pid_gain_msg.data.gain.kp;
         mdc_settings[id].ki = pid_gain_msg.data.gain.ki;
         mdc_settings[id].kd = pid_gain_msg.data.gain.kd;
         mdc_settings[id].forward_gain = pid_gain_msg.data.gain.fg;
 
-        if (id < 4)
-        {
+        if (id < 4) {
           mdc_client.update_setting(id, mdc_settings[id]);
-        }
-        else
-        {
+        } else {
           mdc_client_2.update_setting(id - 4, mdc_settings[id]);
         }
 
         // DEBUG
         memset(debug_msg.data.str, 0, 64);
-        sprintf(debug_msg.data.str, "gain: %d",id);
+        sprintf(debug_msg.data.str, "gain: %d", id);
         serial_control.write(10);
       }
     }
 
-    if (mdc_client.update())
-    {
+    if (mdc_client.update()) {
       //  set target value
       movement_feedback_msg[0].data.target.a = mw.getSpeed(3);
       movement_feedback_msg[0].data.target.b = mw.getSpeed(2);
@@ -321,8 +202,7 @@ int main()
       toggleAcknowledge();
     }
 
-    if (mdc_client_2.update())
-    {
+    if (mdc_client_2.update()) {
       //  set target value
       movement_feedback_msg[1].data.target.a = c_1;
       movement_feedback_msg[1].data.target.b = c_2;
@@ -343,8 +223,7 @@ int main()
       toggleAcknowledge();
     }
 
-    if (msc.was_updated())
-    {
+    if (msc.was_updated()) {
 
       led = !led;
 
@@ -376,25 +255,20 @@ int main()
       double targetRotation = atan2(joyLyValue, joyLxValue) - (PI / 4);
 
       // targetSpeedが1,-1を超えないようにする
-      if (targetSpeed > 1)
-      {
+      if (targetSpeed > 1) {
         targetSpeed = 1;
-      }
-      else if (targetSpeed < -1)
-      {
+      } else if (targetSpeed < -1) {
         targetSpeed = -1;
       }
 
       // targetSpeedが0.03以下の時に起動しないようにする
 
-      if (targetSpeed < 0.03 && targetSpeed > -0.03)
-      {
+      if (targetSpeed < 0.03 && targetSpeed > -0.03) {
         targetSpeed = 0;
       }
 
       // targetRotationがマイナスにならないように2πたす
-      if (targetRotation < 0)
-      {
+      if (targetRotation < 0) {
         targetRotation += (2 * PI);
       }
 
@@ -405,27 +279,17 @@ int main()
       double updown = (triangle - cross) * 49;
 
       // キャタ逆転
-      if (joyL1Value == 1)
-      {
+      if (joyL1Value == 1) {
         c_1 = joyL2Value * -1;
-      }
-      else
-      {
+      } else {
         c_1 = joyL2Value;
       }
 
-      if (joyR1Value == 1)
-      {
+      if (joyR1Value == 1) {
         c_2 = joyR2Value * -1;
-      }
-      else
-      {
+      } else {
         c_2 = joyR2Value;
       }
-
-      // printf("%u\n\r", getMicrosecond() - t_);
-
-    
 
       mdc_client.set_target(0, mw.getSpeed(3) * -1);
       mdc_client.set_target(1, mw.getSpeed(2));
@@ -439,8 +303,6 @@ int main()
 
       mdc_client.send_target();
       mdc_client_2.send_target();
-
-
     }
 
     serial.update();
@@ -452,26 +314,133 @@ int main()
   }
 }
 
-void modules()
-{
+void modules() {
+  //  Azusa 0 -> no.0
+  mdc_settings[0] =
+    {
+    OperatorMode::PID_OPERATOR,
+    EncoderType::VELOCITY,
+    ENCODER_REVOLUTION,
+    false,
+    1.7,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0};
+  //  Azusa 0 -> no.1
+  mdc_settings[1] =
+    {
+    OperatorMode::PID_OPERATOR,
+    EncoderType::VELOCITY,
+    ENCODER_REVOLUTION,
+    false,
+    1.9,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0};
+
+  //  Azusa 0 -> no.2
+  mdc_settings[2] = {
+    OperatorMode::PID_OPERATOR,
+    EncoderType::VELOCITY,
+    ENCODER_REVOLUTION,
+    false,
+    1.8,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0};
+  //  Azusa 0 -> no.3
+  mdc_settings[3] = {
+    OperatorMode::PID_OPERATOR,
+    EncoderType::VELOCITY,
+    ENCODER_REVOLUTION,
+    false,
+    1.9,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0};
+  //////////////////
+  //  Azusa 1 -> no.0
+  mdc_settings[4] = {
+    OperatorMode::MD_OPERATOR,
+    EncoderType::VELOCITY,
+    ENCODER_REVOLUTION,
+    false,
+    1.1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0};
+  //  Azusa 1 -> no.1
+  mdc_settings[5] = {
+    OperatorMode::MD_OPERATOR,
+    EncoderType::VELOCITY,
+    ENCODER_REVOLUTION,
+    true,
+    1.1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0};
+  //  Azusa 1 -> no.2
+  mdc_settings[6] = {
+    OperatorMode::NO_OPERATOR,
+    EncoderType::ANGLE,
+    ENCODER_REVOLUTION,
+    false,
+    1.1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0};
+  //  Azusa 1 -> no.3
+  mdc_settings[7] = {
+    OperatorMode::NO_OPERATOR,
+    EncoderType::ANGLE,
+    ENCODER_REVOLUTION,
+    false,
+    1.1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0};
+
   // MD用PIDゲイン調整 {kp(比例), ki(積分), kd(微分), reverse(逆転)}
   pid[0] = new PID(1.1, 0, 0, 0);
   pid[1] = new PID(1.1, 0, 0, 0);
   pid[2] = new PID(1.1, 0, 0, 0);
 
   // エンコーダーの制御ピン (a, b)
-  encoder[0] = new Encoder(PB_2, PC_6);
+  encoder[0] = new Encoder(PB_2,  PC_6);
   encoder[1] = new Encoder(PB_10, PA_8);
-  encoder[2] = new Encoder(PA_9, PC_7);
+  encoder[2] = new Encoder(PA_9,  PC_7);
 
   // MDの制御ピン (PWMピン, DIRピン, 逆転モード)
-
-  md[0] = new MD(PC_9, PC_5, 0);
-  md[1] = new MD(PC_8, PC_4, 0);
-  md[2] = new MD(PA_0, PA_6, 0);
-  md[3] = new MD(PA_1, PA_7, 0);
+  md[0] = new MD(PC_9, PC_5, false);
+  md[1] = new MD(PC_8, PC_4, false);
+  md[2] = new MD(PA_0, PA_6, false);
+  md[3] = new MD(PA_1, PA_7, false);
 
   // servo (PWMピン, 逆転モード)
-  servo[0] = new Servo(PB_0, 0);
-  servo[1] = new Servo(PB_6, 0);
-}
+  servo[0] = new Servo(PB_0, false);
+  servo[1] = new Servo(PB_6, false);
+};
