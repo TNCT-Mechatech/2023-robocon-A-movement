@@ -87,6 +87,8 @@ setting_struct_t *mdc_settings[8];
 
 double c_1, c_2;
 double updown;
+double ougigataniagaruyatu;
+double nobiruyatu;
 
 void modules();
 
@@ -216,11 +218,11 @@ int main() {
        0,
        0},
       //  Azure 1 -> no.2
-      {OperatorMode::NO_OPERATOR,
+      {OperatorMode::PID_OPERATOR,
        EncoderType::ANGLE,
        ENCODER_REVOLUTION,
        false,
-       1.1,
+       0.1,
        0,
        0,
        0,
@@ -228,11 +230,11 @@ int main() {
        0,
        0},
       //  Azure 1 -> no.3
-      {OperatorMode::NO_OPERATOR,
+      {OperatorMode::PID_OPERATOR,
        EncoderType::ANGLE,
        ENCODER_REVOLUTION,
        false,
-       1.1,
+       0.1,
        0,
        0,
        0,
@@ -311,7 +313,7 @@ int main() {
       //  set target value
       movement_feedback_msg[1].data.target.a = c_1;
       movement_feedback_msg[1].data.target.b = c_2;
-      movement_feedback_msg[1].data.target.c = updown;
+      movement_feedback_msg[1].data.target.c = ougigataniagaruyatu;
       movement_feedback_msg[1].data.target.d = updown;
 
       //  set feedback value
@@ -338,23 +340,21 @@ int main() {
       double joyRxValue = msc.data.Rx;
       double joyRyValue = msc.data.Ry;
 
-      bool joyL1Value = msc.data.L1;
-      bool joyR1Value = msc.data.R1;
+      bool   joyL1Value = msc.data.L1;
+      bool   joyR1Value = msc.data.R1;
 
       double joyL2Value = msc.data.L2;
       double joyR2Value = msc.data.R2;
 
-      bool triangle = msc.data.triangle;
-      bool square = msc.data.square;
-      bool circle = msc.data.circle;
-      bool cross = msc.data.cross;
+      bool   triangle   = msc.data.triangle;
+      bool   square     = msc.data.square;
+      bool   circle     = msc.data.circle;
+      bool   cross      = msc.data.cross;
 
-      bool lc_up = msc.data.lc_up;
-      bool lc_down = msc.data.lc_down;
-      bool lc_left = msc.data.lc_left;
-      bool lc_right = msc.data.lc_right;
-
-      uint32_t t_ = getMicrosecond();
+      bool   lc_up      = msc.data.lc_up;
+      bool   lc_down    = msc.data.lc_down;
+      bool   lc_left    = msc.data.lc_left;
+      bool   lc_right   = msc.data.lc_right;
 
       // ボタンの状態を取得(Lならマイナス,Rならプラス)
       double turn = joyRxValue * -1;
@@ -371,7 +371,6 @@ int main() {
       }
 
       // targetSpeedが0.03以下の時に起動しないようにする
-
       if (joySpeed < 0.03 && joySpeed > -0.03) {
         joySpeed = 0;
       }
@@ -388,8 +387,8 @@ int main() {
       updown = (triangle - cross) * 49;
 
       // 上部周り
-      double oogigataniagaruyatu = (lc_up - lc_down) * 0.7;
-      double nobiruyatu = (lc_left - lc_right) * 3.5;
+      ougigataniagaruyatu = (lc_up - lc_down) * 0.7;
+      nobiruyatu = (lc_left - lc_right) * 3.5;
 
       servo->drive((square - circle) * 50);
 
@@ -401,7 +400,7 @@ int main() {
       sc[4]->drive(joyL2Value, joyL1Value);
       sc[5]->drive(joyR2Value, joyR1Value);
 
-      sc[6]->drive(updown, false);
+      sc[6]->drive(ougigataniagaruyatu, false);
       sc[7]->drive(updown, false);
 
       mdc_client.set_target(0, sc[0]->return_Speed());
@@ -413,6 +412,8 @@ int main() {
       mdc_client_2.set_target(1, sc[5]->return_Speed());
       mdc_client_2.set_target(2, sc[6]->return_Speed());
       mdc_client_2.set_target(3, sc[7]->return_Speed());
+
+      md[0]->drive(nobiruyatu);
 
       mdc_client.send_target();
       mdc_client_2.send_target();
@@ -474,9 +475,9 @@ void modules() {
 
   // MDの制御ピン (PWMピン, DIRピン, 逆転モード)
   md[0] = new MD(PC_9, PC_5, 1.0, false);
-  md[1] = new MD(PC_8, PC_4, 1.0, false);
-  md[2] = new MD(PA_0, PA_6, 1.0, false);
-  md[3] = new MD(PA_1, PA_7, 1.0, false);
+//  md[1] = new MD(PC_8, PC_4, 1.0, false);
+//  md[2] = new MD(PA_0, PA_6, 1.0, false);
+//  md[3] = new MD(PA_1, PA_7, 1.0, false);
 
   // servo (PWMピン, 逆転モード)
   servo = new Servo(PB_0, false);
