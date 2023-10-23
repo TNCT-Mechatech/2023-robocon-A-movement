@@ -16,12 +16,12 @@ public:
     {};
 
 
-    void control(double _targetSpeed, double _targetRotation, double _turn)
+    void control(double _joySpeed, double _joyRotation, double _turn)
     {
-        _wheel[0] = cos(_targetRotation) * _targetSpeed - _turn;
-        _wheel[1] = sin(_targetRotation) * _targetSpeed + _turn;
-        _wheel[2] = sin(_targetRotation) * _targetSpeed - _turn;
-        _wheel[3] = cos(_targetRotation) * _targetSpeed + _turn;
+        _wheel[0] = cos(_joyRotation) * _joySpeed - _turn;
+        _wheel[1] = sin(_joyRotation) * _joySpeed + _turn;
+        _wheel[2] = sin(_joyRotation) * _joySpeed - _turn;
+        _wheel[3] = cos(_joyRotation) * _joySpeed + _turn;
     }
 
 

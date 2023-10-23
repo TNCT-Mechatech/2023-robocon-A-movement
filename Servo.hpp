@@ -3,33 +3,34 @@
 
 #include "mbed.h"
 #include "math.h"
+#include <cstdio>
 
 class Servo
 {
-  private:
-    double _servo;
-    PwmOut servo;
-    bool reverse;
+private:
+  int _servo;
+  PwmOut servo;
+  bool reverse;
 
-  public:
+public:
   Servo(PinName Servo_pin, bool reverse)
-  : servo(Servo_pin), reverse(reverse), _servo(0)
+    : servo(Servo_pin), reverse(reverse), _servo(0)
   {
-    servo.period(0.003);
+    servo.period(0.02);
   }
 
   void adjust()
   {
-    if(_servo > (0.81)){
-        _servo = (0.81);
-    }else if(_servo < (0.18)){
-        _servo = (0.18);
+    if(_servo > (2500)){
+      _servo = (2500);
+    }else if(_servo < (500)){
+      _servo = (500);
     }
   }
 
 // num分足す 高い値入れたらダメ
 
-  void drive(double num)
+  void drive(int num)
   {
     _servo += num;
 
@@ -39,7 +40,10 @@ class Servo
       _servo *= -1;
     }
 
-    servo = _servo;
+    // printf("servo_ = %d\n\r",_servo);
+
+    // 500~2500
+    servo.pulsewidth_us(_servo);
   }
 };
 

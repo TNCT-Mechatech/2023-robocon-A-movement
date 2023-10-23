@@ -10,6 +10,7 @@ private:
 
   double num;
   double feedback;
+  bool reverse;
 
 public:
 
@@ -17,14 +18,15 @@ public:
   : num(num), feedback(0)
   {};
 
-  void drive(
-    double targetSpeed,
-    bool reverse
-    )
+  void drive(double targetSpeed, bool reverse)
   {
-    if(targetSpeed > behind){
+    if(reverse){
+      targetSpeed *= -1;
+    }
+
+    if(targetSpeed > feedback){
       feedback += num;
-    }else if(targetSpeed < bihind){
+    }else if(targetSpeed < feedback){
       feedback -= num;
     }
   };
@@ -33,9 +35,6 @@ public:
   {
     return feedback;
   };
-
-
-
 };
 
 #endif

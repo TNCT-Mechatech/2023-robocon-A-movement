@@ -27,9 +27,8 @@
 #include "SpeedController.hpp"
 
 #include "Encoder.hpp"
-#include "md.hpp"
-#include "pid.hpp"
-
+#include "MD.hpp"
+#include "PID.hpp"
 
 
 Timer timer;
@@ -76,14 +75,18 @@ DigitalOut led(PA_5);
 
 MecanumWheel mw;
 
-Encoder *encoder[3];
-PID *pid[3];
 MD *md[4];
-Servo *servo[2];
+//Encoder *encoder[3];
+//PID::ctrl_param_t pid_param[3];
+//PID::ctrl_variable_t v_vel[3];
+//PID *pid[3];
+
+Servo *servo;
 SpeedController *sc[8];
 setting_struct_t *mdc_settings[8];
 
 double c_1, c_2;
+double updown;
 
 void modules();
 
@@ -137,6 +140,105 @@ int main() {
   printf("all configuration completed!\n\r");
 
   void modules();
+
+  setting_struct_t mdc_settings[8] = {
+    //  Azure 0 -> no.0
+      {OperatorMode::PID_OPERATOR,
+       EncoderType::VELOCITY,
+       ENCODER_REVOLUTION,
+       false,
+       1.7,
+       0,
+       0,
+       0,
+       0,
+       0,
+       0},
+      //  Azure 0 -> no.1
+      {OperatorMode::PID_OPERATOR,
+       EncoderType::VELOCITY,
+       ENCODER_REVOLUTION,
+       false,
+       1.9,
+       0,
+       0,
+       0,
+       0,
+       0,
+       0},
+      //  Azure 0 -> no.2
+      {OperatorMode::PID_OPERATOR,
+       EncoderType::VELOCITY,
+       ENCODER_REVOLUTION,
+       false,
+       1.8,
+       0,
+       0,
+       0,
+       0,
+       0,
+       0},
+      //  Azure 0 -> no.3
+      {OperatorMode::PID_OPERATOR,
+       EncoderType::VELOCITY,
+       ENCODER_REVOLUTION,
+       false,
+       1.9,
+       0,
+       0,
+       0,
+       0,
+       0,
+       0},
+      //////////////////
+      //  Azure 1 -> no.0
+      {OperatorMode::MD_OPERATOR,
+       EncoderType::VELOCITY,
+       ENCODER_REVOLUTION,
+       false,
+       1.1,
+       0,
+       0,
+       0,
+       0,
+       0,
+       0},
+      //  Azure 1 -> no.1
+      {OperatorMode::MD_OPERATOR,
+       EncoderType::VELOCITY,
+       ENCODER_REVOLUTION,
+       true,
+       1.1,
+       0,
+       0,
+       0,
+       0,
+       0,
+       0},
+      //  Azure 1 -> no.2
+      {OperatorMode::NO_OPERATOR,
+       EncoderType::ANGLE,
+       ENCODER_REVOLUTION,
+       false,
+       1.1,
+       0,
+       0,
+       0,
+       0,
+       0,
+       0},
+      //  Azure 1 -> no.3
+      {OperatorMode::NO_OPERATOR,
+       EncoderType::ANGLE,
+       ENCODER_REVOLUTION,
+       false,
+       1.1,
+       0,
+       0,
+       0,
+       0,
+       0,
+       0}};
 
   wait_us(2000 * 1000);
 
@@ -209,9 +311,8 @@ int main() {
       //  set target value
       movement_feedback_msg[1].data.target.a = c_1;
       movement_feedback_msg[1].data.target.b = c_2;
-      //  todo replace here
-      movement_feedback_msg[1].data.target.c = 0;
-      movement_feedback_msg[1].data.target.d = 0;
+      movement_feedback_msg[1].data.target.c = updown;
+      movement_feedback_msg[1].data.target.d = updown;
 
       //  set feedback value
       movement_feedback_msg[1].data.output.a = mdc_client.feedback.data.node[0].velocity;
@@ -248,6 +349,11 @@ int main() {
       bool circle = msc.data.circle;
       bool cross = msc.data.cross;
 
+      bool lc_up = msc.data.lc_up;
+      bool lc_down = msc.data.lc_down;
+      bool lc_left = msc.data.lc_left;
+      bool lc_right = msc.data.lc_right;
+
       uint32_t t_ = getMicrosecond();
 
       // ボタンの状態を取得(Lならマイナス,Rならプラス)
@@ -279,7 +385,13 @@ int main() {
       mw.control(joySpeed * 2, joyRotation, turn);
 
       // 上部展開(49)
-      double updown = (triangle - cross) * 49;
+      updown = (triangle - cross) * 49;
+
+      // 上部周り
+      double oogigataniagaruyatu = (lc_up - lc_down) * 0.7;
+      double nobiruyatu = (lc_left - lc_right) * 3.5;
+
+      servo->drive((square - circle) * 50);
 
       sc[0]->drive(mw.getSpeed(3), true);
       sc[1]->drive(mw.getSpeed(2), false);
@@ -289,15 +401,18 @@ int main() {
       sc[4]->drive(joyL2Value, joyL1Value);
       sc[5]->drive(joyR2Value, joyR1Value);
 
+      sc[6]->drive(updown, false);
+      sc[7]->drive(updown, false);
+
       mdc_client.set_target(0, sc[0]->return_Speed());
       mdc_client.set_target(1, sc[1]->return_Speed());
       mdc_client.set_target(2, sc[2]->return_Speed());
       mdc_client.set_target(3, sc[3]->return_Speed());
 
-      mdc_client_2.set_target(0, c_1);
-      mdc_client_2.set_target(1, c_2);
-      mdc_client_2.set_target(2, updown);
-      mdc_client_2.set_target(3, updown);
+      mdc_client_2.set_target(0, sc[4]->return_Speed());
+      mdc_client_2.set_target(1, sc[5]->return_Speed());
+      mdc_client_2.set_target(2, sc[6]->return_Speed());
+      mdc_client_2.set_target(3, sc[7]->return_Speed());
 
       mdc_client.send_target();
       mdc_client_2.send_target();
@@ -313,112 +428,6 @@ int main() {
 }
 
 void modules() {
-  //  Azusa 0 -> no.0
-  mdc_settings[0] = {
-    OperatorMode::PID_OPERATOR,
-    EncoderType::VELOCITY,
-    ENCODER_REVOLUTION,
-    false,
-    1.7,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0};
-  //  Azusa 0 -> no.1
-  mdc_settings[1] = {
-    OperatorMode::PID_OPERATOR,
-    EncoderType::VELOCITY,
-    ENCODER_REVOLUTION,
-    false,
-    1.9,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0};
-
-  //  Azusa 0 -> no.2
-  mdc_settings[2] = {
-    OperatorMode::PID_OPERATOR,
-    EncoderType::VELOCITY,
-    ENCODER_REVOLUTION,
-    false,
-    1.8,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0};
-  //  Azusa 0 -> no.3
-  mdc_settings[3] = {
-    OperatorMode::PID_OPERATOR,
-    EncoderType::VELOCITY,
-    ENCODER_REVOLUTION,
-    false,
-    1.9,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0};
-  //////////////////
-  //  Azusa 1 -> no.0
-  mdc_settings[4] = {
-    OperatorMode::MD_OPERATOR,
-    EncoderType::VELOCITY,
-    ENCODER_REVOLUTION,
-    false,
-    1.1,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0};
-  //  Azusa 1 -> no.1
-  mdc_settings[5] = {
-    OperatorMode::MD_OPERATOR,
-    EncoderType::VELOCITY,
-    ENCODER_REVOLUTION,
-    true,
-    1.1,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0};
-  //  Azusa 1 -> no.2
-  mdc_settings[6] = {
-    OperatorMode::NO_OPERATOR,
-    EncoderType::ANGLE,
-    ENCODER_REVOLUTION,
-    false,
-    1.1,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0};
-  //  Azusa 1 -> no.3
-  mdc_settings[7] = {
-    OperatorMode::NO_OPERATOR,
-    EncoderType::ANGLE,
-    ENCODER_REVOLUTION,
-    false,
-    1.1,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0};
 
   // 台形加速
   sc[0] = new SpeedController(0.01);
@@ -427,27 +436,48 @@ void modules() {
   sc[3] = new SpeedController(0.01);
   sc[4] = new SpeedController(0.01);
   sc[5] = new SpeedController(0.01);
-  sc[6] = new SpeedController(0.01);
-  sc[7] = new SpeedController(0.01);
+  sc[6] = new SpeedController(0.1);
+  sc[7] = new SpeedController(0.1);
 
-
-  // MD用PIDゲイン調整 {kp(比例), ki(積分), kd(微分), reverse(逆転)}
-  pid[0] = new PID(1.1, 0, 0, 0);
-  pid[1] = new PID(1.1, 0, 0, 0);
-  pid[2] = new PID(1.1, 0, 0, 0);
-
-  // エンコーダーの制御ピン (a, b)
-  encoder[0] = new Encoder(PB_2,  PC_6);
-  encoder[1] = new Encoder(PB_10, PA_8);
-  encoder[2] = new Encoder(PA_9,  PC_7);
+  //  pid gain
+//  pid_param[0] = PID::ctrl_param_t {
+//    0.2,
+//    0.0,
+//    0.0,
+//    0.125,
+//    false
+//  };
+//  pid_param[1] = PID::ctrl_param_t {
+//    0.2,
+//    0.0,
+//    0.0,
+//    0.125,
+//    false
+//  };
+//  pid_param[2] = PID::ctrl_param_t {
+//    0.2,
+//    0.0,
+//    0.0,
+//    0.125,
+//    false
+//  };
+//
+//  // MD用PIDゲイン調整 {kp(比例), ki(積分), kd(微分), reverse(逆転)}
+//  pid[0] = new PID(v_vel[0], pid_param[0]);
+//  pid[1] = new PID(v_vel[1], pid_param[1]);
+//  pid[2] = new PID(v_vel[2], pid_param[2]);
+//
+//  // エンコーダーの制御ピン (a, b)
+//  encoder[0] = new Encoder(PB_2,  PC_6, ?);
+//  encoder[1] = new Encoder(PB_10, PA_8, ?);
+//  encoder[2] = new Encoder(PA_9,  PC_7, ?);
 
   // MDの制御ピン (PWMピン, DIRピン, 逆転モード)
-  md[0] = new MD(PC_9, PC_5, false);
-  md[1] = new MD(PC_8, PC_4, false);
-  md[2] = new MD(PA_0, PA_6, false);
-  md[3] = new MD(PA_1, PA_7, false);
+  md[0] = new MD(PC_9, PC_5, 1.0, false);
+  md[1] = new MD(PC_8, PC_4, 1.0, false);
+  md[2] = new MD(PA_0, PA_6, 1.0, false);
+  md[3] = new MD(PA_1, PA_7, 1.0, false);
 
   // servo (PWMピン, 逆転モード)
-  servo[0] = new Servo(PB_0, false);
-  servo[1] = new Servo(PB_6, false);
+  servo = new Servo(PB_0, false);
 };

@@ -1,115 +1,41 @@
 #ifndef _ENCODER_HPP_
 #define _ENCODER_HPP_
 
-#include "mbed.h"
-#include "math.h"
-#include <chrono>
+#include "DigitalOut.h"
+#include <mbed.h>
+
+#define M_PI 3.14159265358979323846
 
 class Encoder
 {
-private:
-    InterruptIn encoder_a;
-    InterruptIn encoder_b;
-
-    int revolution;
-    int count;
-    int rotate;
-    double rps;
-    double last_angle;
-    double last_rotation;
-
-
-
-
-    void rise_a()
-    {
-        if(encoder_b.read()){
-            count++;
-            rotate = 0;
-        }else if(!encoder_b.read()){
-            count--;
-            rotate = 1;
-        };
-    }
-
-    void rise_b()
-    {
-        if(encoder_a.read()){
-            count++;
-            rotate = 0;
-        }else if(!encoder_a.read()){
-            count--;
-            rotate = 1;
-        };
-    }
-
-    void fall_a()
-    {
-        if(encoder_b.read()){
-            count--;
-            rotate = 0;
-        }else if(!encoder_b.read()){
-            count++;
-            rotate = 1;
-        };
-    }
-
-    void fall_b()
-    {
-        if(encoder_a.read()){
-            count--;
-            rotate = 0;
-        }else if(!encoder_a.read()){
-            count++;
-            rotate = 1;
-        };
-    }
-
-
-
-
 public:
-    Encoder(PinName encoder_a_pin, PinName encoder_b_pin)
-            : encoder_a(encoder_a_pin), encoder_b(encoder_b_pin)
-    {
-        encoder_a.rise(callback(this, &Encoder::rise_a));
-        encoder_b.rise(callback(this, &Encoder::rise_b));
-        encoder_a.fall(callback(this, &Encoder::fall_a));
-        encoder_b.fall(callback(this, &Encoder::fall_b));
- 
-        count = 0;
-        last_angle = 0;
-    };
-
-    double get_rotation()
-    {
-        return (double)count/1296;
-    }
-
-    double get_count()
-    {
-        return count;
-    }
-
-    void reset()
-    {
-        count = 0;
-        last_angle = 0;
-    }
-
-    double get_rps(double dt)
-    {
-        rps = ( get_rotation() - last_rotation ) / dt;
-
-
-        last_rotation = get_rotation();
-
-        return (double)rps;
-    }
-
-
+    Encoder(PinName channel_a, PinName channel_b, int revolution);
+    
+    void reset();
+    
+    double get_revolution();
+    double get_rps(double dt);
+    
+    int get_count();
+    
+private:
+    //  Encoder Pin
+    InterruptIn _A, _B;
+    // InterruptIn _A;
+    // DigitalIn _B;
+    //  revolution
+    int _revolution;
+    
+    //  count
+    int _count;
+    double _last_angle;
+    double _angle_velocity;
+    
+    //  interrupt
+    void _AR();
+    void _AF();
+    void _BR();
+    void _BF();
 };
-
-
 
 #endif
