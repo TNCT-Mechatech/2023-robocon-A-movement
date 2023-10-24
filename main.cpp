@@ -26,9 +26,9 @@
 #include "Servo.hpp"
 #include "SpeedController.hpp"
 
-#include "Encoder.hpp"
+//#include "Encoder.hpp"
 #include "MD.hpp"
-#include "PID.hpp"
+//#include "PID.hpp"
 
 
 Timer timer;
@@ -331,6 +331,11 @@ int main() {
 
       led = !led;
 
+      // DEBUG
+      memset(debug_msg.data.str, 0, 64);
+      sprintf(debug_msg.data.str, "0");
+      serial_control.write(10);
+
       // Joystickの値を取得(値域を+0.5から±1にする)
 
       double joyLxValue = msc.data.Lx;
@@ -384,6 +389,11 @@ int main() {
       // 目標速度, 回転速度, 回転方向を設定
       mw.control(joySpeed * 2, joyRotation, turn);
 
+      // DEBUG
+      memset(debug_msg.data.str, 0, 64);
+      sprintf(debug_msg.data.str, "1");
+      serial_control.write(10);
+      
       // 上部展開(49)
       updown = (triangle - cross) * 49;
 
@@ -391,12 +401,15 @@ int main() {
       double oogigataniagaruyatu = (lc_up - lc_down) * 0.7;
       double nobiruyatu = (lc_left - lc_right) * 3.5;
 
+      
       servo->drive((square - circle) * 50);
+      
 
       sc[0]->drive(mw.getSpeed(3), true);
       sc[1]->drive(mw.getSpeed(2), false);
       sc[2]->drive(mw.getSpeed(1), true);
       sc[3]->drive(mw.getSpeed(0), false);
+      /*
 
       sc[4]->drive(joyL2Value, joyL1Value);
       sc[5]->drive(joyR2Value, joyR1Value);
@@ -416,6 +429,7 @@ int main() {
 
       mdc_client.send_target();
       mdc_client_2.send_target();
+      */
     }
 
     serial.update();
@@ -479,5 +493,5 @@ void modules() {
   md[3] = new MD(PA_1, PA_7, 1.0, false);
 
   // servo (PWMピン, 逆転モード)
-  servo = new Servo(PB_0, false);
+  servo = new Servo(PB_2, false);
 };
