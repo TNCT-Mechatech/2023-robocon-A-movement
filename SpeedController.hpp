@@ -3,6 +3,7 @@
 
 #include "mbed.h"
 #include "math.h"
+#include "cstdio"
 
 class SpeedController {
 
@@ -16,7 +17,7 @@ public:
 
   SpeedController(double num)
   : num(num), feedback(0)
-  {};
+  {}
 
   void drive(double targetSpeed, bool reverse)
   {
@@ -29,7 +30,7 @@ public:
     }else if(targetSpeed < feedback){
       feedback -= num;
     }
-  };
+  }
 
   double return_Speed()
   {

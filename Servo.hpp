@@ -19,22 +19,11 @@ public:
     servo.period(0.02);
   }
 
-  void adjust()
-  {
-    if(_servo > (2500)){
-      _servo = (2500);
-    }else if(_servo < (500)){
-      _servo = (500);
-    }
-  }
-
 // num分足す 高い値入れたらダメ
 
   void drive(int num)
   {
     _servo += num;
-
-    adjust();
 
     if(reverse){
       _servo *= -1;
@@ -42,8 +31,16 @@ public:
 
     // printf("servo_ = %d\n\r",_servo);
 
+    if(_servo > (2500)){
+      _servo = (2500);
+    }else if(_servo < (500)){
+      _servo = (500);
+    }
+
     // 500~2500
     servo.pulsewidth_us(_servo);
+    // servo.pulsewidth_us(500);
+    // servo.write(0.5);
   }
 };
 
