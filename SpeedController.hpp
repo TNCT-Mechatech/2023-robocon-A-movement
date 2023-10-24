@@ -9,33 +9,42 @@ class SpeedController {
 
 private:
 
-  double num;
-  double feedback;
-  bool reverse;
+  double _increment;
+  double _target;
+  double _feedback;
+  double _width;
 
 public:
 
-  SpeedController(double num)
-  : num(num), feedback(0)
+    /**
+     * コンストラクター
+     * @param increment １ループで増減する値
+     * @param width 許容する値（荒ぶり防止）
+     */
+  SpeedController(double increment, double width)
+  : _increment(increment), _width(width), _feedback(0), _target(0)
   {}
 
-  void drive(double targetSpeed, bool reverse)
+  void set_target(double target)
   {
-    if(reverse){
-      targetSpeed *= -1;
-    }
-
-    if(targetSpeed > feedback){
-      feedback += num;
-    }else if(targetSpeed < feedback){
-      feedback -= num;
-    }
+      _target = target;
   }
 
-  double return_Speed()
+  double step()
   {
-    return feedback;
-  };
+      if (abs(_target - _feedback) < _width) {
+          _feedback = _target;
+      }
+      else if((_target - _feedback) > 0)
+      {
+          _feedback += _num;
+      }
+      else {
+          _feedback -= _num;
+      }
+
+      return _feedback;
+  }
 };
 
 #endif

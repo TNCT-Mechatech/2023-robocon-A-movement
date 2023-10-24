@@ -404,27 +404,26 @@ int main() {
       servo->drive((square - circle) * 50);
       
 
-      sc[0]->drive(mw.getSpeed(3), true);
-      sc[1]->drive(mw.getSpeed(2), false);
-      sc[2]->drive(mw.getSpeed(1), true);
-      sc[3]->drive(mw.getSpeed(0), false);
-      /*
+      sc[0]->set_target(mw.getSpeed(3));
+      sc[1]->set_target(mw.getSpeed(2));
+      sc[2]->set_target(mw.getSpeed(1));
+      sc[3]->set_target(mw.getSpeed(0));
 
-      sc[4]->drive(joyL2Value, joyL1Value);
-      sc[5]->drive(joyR2Value, joyR1Value);
+      sc[4]->set_target(joyL2Value);
+      sc[5]->set_target(joyR2Value);
 
-      sc[6]->drive(ougigataniagaruyatu, false);
-      sc[7]->drive(updown, false);
+      sc[6]->set_target(ougigataniagaruyatu);
+      sc[7]->set_target(updown);
 
-      mdc_client.set_target(0, sc[0]->return_Speed());
-      mdc_client.set_target(1, sc[1]->return_Speed());
-      mdc_client.set_target(2, sc[2]->return_Speed());
-      mdc_client.set_target(3, sc[3]->return_Speed());
+      mdc_client.set_target(0, sc[0]->step());
+      mdc_client.set_target(1, sc[1]->step());
+      mdc_client.set_target(2, sc[2]->step());
+      mdc_client.set_target(3, sc[3]->step());
 
-      mdc_client_2.set_target(0, sc[4]->return_Speed());
-      mdc_client_2.set_target(1, sc[5]->return_Speed());
-      mdc_client_2.set_target(2, sc[6]->return_Speed());
-      mdc_client_2.set_target(3, sc[7]->return_Speed());
+      mdc_client_2.set_target(0, sc[4]->step());
+      mdc_client_2.set_target(1, sc[5]->step());
+      mdc_client_2.set_target(2, sc[6]->step());
+      mdc_client_2.set_target(3, sc[7]->step());
 
       md[0]->drive(nobiruyatu);
 
@@ -435,24 +434,22 @@ int main() {
 
     serial.update();
 
-    gSentDate = getMillisecond();
-
     // 周期調整用 (ここを変えるならDELTA_Tも変える)
-    // ThisThread::sleep_for(70ms);
+//    ThisThread::sleep_for(70);
   }
 }
 
 void modules() {
 
   // 台形加速
-  sc[0] = new SpeedController(0.01);
-  sc[1] = new SpeedController(0.01);
-  sc[2] = new SpeedController(0.01);
-  sc[3] = new SpeedController(0.01);
-  sc[4] = new SpeedController(0.01);
-  sc[5] = new SpeedController(0.01);
-  sc[6] = new SpeedController(0.1);
-  sc[7] = new SpeedController(0.1);
+  sc[0] = new SpeedController(0.01, 0.2);
+  sc[1] = new SpeedController(0.01, 0.2);
+  sc[2] = new SpeedController(0.01, 0.2);
+  sc[3] = new SpeedController(0.01, 0.2);
+  sc[4] = new SpeedController(0.01, 0.2);
+  sc[5] = new SpeedController(0.01, 0.2);
+  sc[6] = new SpeedController(0.1, 0.2);
+  sc[7] = new SpeedController(0.1, 0.2);
 
   //  pid gain
 //  pid_param[0] = PID::ctrl_param_t {
