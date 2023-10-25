@@ -26,10 +26,9 @@
 #include "Servo.hpp"
 #include "SpeedController.hpp"
 
-//#include "Encoder.hpp"
 #include "MD.hpp"
+//#include "Encoder.hpp"
 //#include "PID.hpp"
-
 
 Timer timer;
 double pre_timer = 0.01;
@@ -41,15 +40,13 @@ using namespace acan2517fd;
 const double PI = 3.1415;
 
 uint32_t getMillisecond() {
-  return (uint32_t) duration_cast<std::chrono::milliseconds>(
-    timer.elapsed_time())
-    .count();
+  return (uint32_t) duration_cast<std::chrono::milliseconds>
+    (timer.elapsed_time()).count();
 }
 
 uint32_t getMicrosecond() {
-  return (uint32_t) duration_cast<std::chrono::microseconds>(
-    timer.elapsed_time())
-    .count();
+  return (uint32_t) duration_cast<std::chrono::microseconds>
+    (timer.elapsed_time()).count();
 }
 
 // mosi,miso,sck
@@ -58,8 +55,8 @@ MbedHardwareSPI hardware_dev0(spi, PB_12);
 ACAN2517FD dev0_can(hardware_dev0, getMillisecond);
 CANSerialBridge serial(&dev0_can);
 
-MDCClient mdc_client(&serial, 0);
-MDCClient mdc_client_2(&serial, 1);
+MDCClient mdc_client   (&serial, 0);
+MDCClient mdc_client_2 (&serial, 1);
 
 DigitalOut acknowledge_0(PA_4);
 
@@ -76,14 +73,15 @@ DigitalOut led(PA_5);
 MecanumWheel mw;
 
 //台形加速
-SpeedController sc0(0.01, 0.2);
-SpeedController sc1(0.01, 0.2);
-SpeedController sc2(0.01, 0.2);
-SpeedController sc3(0.01, 0.2);
-SpeedController sc4(0.01, 0.02);
-SpeedController sc5(0.01, 0.02);
-SpeedController sc6(0.1, 0.2);
-SpeedController sc7(0.1, 0.2);
+SpeedController sc0(0.01, 0.05);
+SpeedController sc1(0.01, 0.05);
+SpeedController sc2(0.01, 0.05);
+SpeedController sc3(0.01, 0.05);
+SpeedController sc4(0.2,  0.3);
+SpeedController sc5(0.2,  0.3);
+SpeedController sc6(0.1,  0.2);
+SpeedController sc7(0.1,  0.2);
+SpeedController sc8(0.1,  0.2);
 
 //MD *md[4];
 //Encoder *encoder[3];
@@ -128,7 +126,7 @@ int main() {
 
   settings.mRequestedMode = ACAN2517FDSettings::NormalFD;
 
-  settings.mDriverTransmitFIFOSize = 5;
+  settings.mDriverTransmitFIFOSize = 8;
   settings.mDriverReceiveFIFOSize = 5;
 
   settings.mBitRatePrescaler = 1;
@@ -158,7 +156,7 @@ int main() {
 
   setting_struct_t mdc_settings[8] = {
     //  Azure 0 -> no.0
-      {OperatorMode::PID_OPERATOR,
+      {OperatorMode::MD_OPERATOR,
        EncoderType::VELOCITY,
        ENCODER_REVOLUTION,
        false,
@@ -170,7 +168,7 @@ int main() {
        0,
        0},
       //  Azure 0 -> no.1
-      {OperatorMode::PID_OPERATOR,
+      {OperatorMode::MD_OPERATOR,
        EncoderType::VELOCITY,
        ENCODER_REVOLUTION,
        false,
@@ -182,7 +180,7 @@ int main() {
        0,
        0},
       //  Azure 0 -> no.2
-      {OperatorMode::PID_OPERATOR,
+      {OperatorMode::MD_OPERATOR,
        EncoderType::VELOCITY,
        ENCODER_REVOLUTION,
        false,
@@ -194,7 +192,7 @@ int main() {
        0,
        0},
       //  Azure 0 -> no.3
-      {OperatorMode::PID_OPERATOR,
+      {OperatorMode::MD_OPERATOR,
        EncoderType::VELOCITY,
        ENCODER_REVOLUTION,
        false,
@@ -231,8 +229,8 @@ int main() {
        0,
        0},
       //  Azure 1 -> no.2
-      {OperatorMode::PID_OPERATOR,
-       EncoderType::ANGLE,
+      {OperatorMode::MD_OPERATOR,
+       EncoderType::VELOCITY,
        ENCODER_REVOLUTION,
        false,
        0.1,
@@ -243,8 +241,8 @@ int main() {
        0,
        0},
       //  Azure 1 -> no.3
-      {OperatorMode::PID_OPERATOR,
-       EncoderType::ANGLE,
+      {OperatorMode::MD_OPERATOR,
+       EncoderType::VELOCITY,
        ENCODER_REVOLUTION,
        false,
        0.1,
@@ -351,7 +349,7 @@ int main() {
       sprintf(debug_msg.data.str, "0");
       serial_control.write(10);
 
-      // Joystickの値を取得(値域を+0.5から±1にする)
+      // Joystickの値を取得
 
       double joyLxValue = msc.data.Lx;
       double joyLyValue = msc.data.Ly;
@@ -378,7 +376,7 @@ int main() {
       double turn = joyRxValue * -1;
 
       // Joystickのベクトル化
-      double joySpeed    = sqrt(joyLxValue * joyLxValue + joyLyValue * joyLyValue);
+      double joySpeed    = sqrt (joyLxValue * joyLxValue + joyLyValue * joyLyValue);
       double joyRotation = atan2(joyLyValue, joyLxValue) - (PI / 4);
 
       // targetSpeedが1,-1を超えないようにする
@@ -399,24 +397,21 @@ int main() {
       }
 
       // 目標速度, 回転速度, 回転方向を設定
-      mw.control(joySpeed * 2, joyRotation, turn);
+      mw.control(joySpeed, joyRotation, turn);
 
-      // DEBUG
-      memset(debug_msg.data.str, 0, 64);
-      sprintf(debug_msg.data.str, "1");
-      serial_control.write(10);
       
-      // 上部展開(49)
-      updown = (triangle - cross) * 49;
+      // 上部展開[台形ネジ](49回転で伸びるよ)
+      updown = (triangle - cross) * 1.0;
 
-      // 上部周り
-      ougigataniagaruyatu = (lc_up - lc_down) * 0.7;
-      nobiruyatu = (lc_left - lc_right) * 3.5;
+      // 上部周り(ougigataniagaruyatuは角度制御してもよし)
+      ougigataniagaruyatu = ((lc_up * 0.15) - (lc_down * 0.1));
+      nobiruyatu = (lc_left - lc_right) * 0.1;
 
-      // kyata
+      // キャタピラ
       c_1 = joyL2Value;
       c_2 = joyR2Value;
 
+      // キャタピラ逆転用
       if(joyL1Value){
         c_1 *= -1;
       }
@@ -425,6 +420,10 @@ int main() {
         c_2 *= -1;
       }
 
+      // サーボ(手) numは50~500くらいが無難
+      servo.drive((square - circle) * 50);
+
+      // 台形加速
       sc0.set_target(mw.getSpeed(3));
       sc1.set_target(mw.getSpeed(2));
       sc2.set_target(mw.getSpeed(1));
@@ -435,101 +434,46 @@ int main() {
 
       sc6.set_target(ougigataniagaruyatu);
       sc7.set_target(updown);
-      
-      servo.drive((square - circle) * 50);
 
-      // Azusa0 送信
+
+      // Azusa[0] 送信値設定
 
       // メカナム
-      mdc_client.set_target(0, sc0.step());
+      mdc_client.set_target(0, sc0.step() * -1);
       mdc_client.set_target(1, sc1.step());
-      mdc_client.set_target(2, sc2.step());
+      mdc_client.set_target(2, sc2.step() * -1);
       mdc_client.set_target(3, sc3.step());
 
-      // Azusa1 送信
+      // mdc_client.set_target(0, mw.getSpeed(3) * -1);
+      // mdc_client.set_target(1, mw.getSpeed(2));
+      // mdc_client.set_target(2, mw.getSpeed(1) * -1);
+      // mdc_client.set_target(3, mw.getSpeed(0));
+
+      // Azusa[1] 送信値設定
 
       // キャタピラ
-      mdc_client_2.set_target(0,sc4.step());
-      mdc_client_2.set_target(1,sc5.step());
+      mdc_client_2.set_target(0, sc4.step());
+      mdc_client_2.set_target(1, sc5.step());
 
-      //  仰角
-      mdc_client_2.set_target(2, sc6.step());
-      //  台形ネジ
-      mdc_client_2.set_target(3, sc7.step());
+      //  扇型にあがるやつ
+      mdc_client_2.set_target(2, ougigataniagaruyatu);
+      // mdc_client_2.set_target(2, sc6.step());
 
-      //  伸びるやつ(目視確認)
+      //  上部展開[台形ネジ]
+      mdc_client_2.set_target(3, updown);
+      // mdc_client_2.set_target(3, sc7.step());
+
+      //  伸びるやつ
       md.drive(nobiruyatu);
 
-      //  send messages
+      //  Azusa 送信
       mdc_client.send_target();
       mdc_client_2.send_target();
-
-      
     }
 
     serial.update();
 
-    // 周期調整用 (ここを変えるならDELTA_Tも変える)
-//    ThisThread::sleep_for(70);
+    // 周期調整用 (ROSで調整済み[10ms])
+    // ThisThread::sleep_for(70);
   }
 }
-
-
-/*
-
-void modules() {
-
-   台形加速
-  sc[0] = new SpeedController(0.01, 0.2);
-  sc[1] = new SpeedController(0.01, 0.2);
-  sc[2] = new SpeedController(0.01, 0.2);
-  sc[3] = new SpeedController(0.01, 0.2);
-  sc[4] = new SpeedController(0.01, 0.02);
-  sc[5] = new SpeedController(0.01, 0.02);
-  sc[6] = new SpeedController(0.1, 0.2);
-  sc[7] = new SpeedController(0.1, 0.2);
-
-  //  pid gain
-//  pid_param[0] = PID::ctrl_param_t {
-//    0.2,
-//    0.0,
-//    0.0,
-//    0.125,
-//    false
-//  };
-//  pid_param[1] = PID::ctrl_param_t {
-//    0.2,
-//    0.0,
-//    0.0,
-//    0.125,
-//    false
-//  };
-//  pid_param[2] = PID::ctrl_param_t {
-//    0.2,
-//    0.0,
-//    0.0,
-//    0.125,
-//    false
-//  };
-//
-//  // MD用PIDゲイン調整 {kp(比例), ki(積分), kd(微分), reverse(逆転)}
-//  pid[0] = new PID(v_vel[0], pid_param[0]);
-//  pid[1] = new PID(v_vel[1], pid_param[1]);
-//  pid[2] = new PID(v_vel[2], pid_param[2]);
-//
-//  // エンコーダーの制御ピン (a, b)
-//  encoder[0] = new Encoder(PB_2,  PC_6, ?);
-//  encoder[1] = new Encoder(PB_10, PA_8, ?);
-//  encoder[2] = new Encoder(PA_9,  PC_7, ?);
-
-  // MDの制御ピン (PWMピン, DIRピン, 逆転モード)
-  md[0] = new MD(PC_9, PC_5, 1.0, false);
-//  md[1] = new MD(PC_8, PC_4, 1.0, false);
-//  md[2] = new MD(PA_0, PA_6, 1.0, false);
-//  md[3] = new MD(PA_1, PA_7, 1.0, false);
-
-  // servo (PWMピン, 逆転モード)
-  servo = new Servo(PB_2, false);
-};
-
- */
