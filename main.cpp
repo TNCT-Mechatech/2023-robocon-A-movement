@@ -75,14 +75,27 @@ DigitalOut led(PA_5);
 
 MecanumWheel mw;
 
-MD *md[4];
+//台形加速
+SpeedController sc0(0.01, 0.2);
+SpeedController sc1(0.01, 0.2);
+SpeedController sc2(0.01, 0.2);
+SpeedController sc3(0.01, 0.2);
+SpeedController sc4(0.01, 0.02);
+SpeedController sc5(0.01, 0.02);
+SpeedController sc6(0.1, 0.2);
+SpeedController sc7(0.1, 0.2);
+
+//MD *md[4];
 //Encoder *encoder[3];
 //PID::ctrl_param_t pid_param[3];
 //PID::ctrl_variable_t v_vel[3];
 //PID *pid[3];
 
-Servo *servo;
-SpeedController *sc[8];
+Servo servo(PB_2, false);
+MD md(PC_9, PC_5, 1.0, false);
+
+//Servo *servo;
+//SpeedController *sc[8];
 setting_struct_t *mdc_settings[8];
 
 double c_1, c_2;
@@ -90,7 +103,7 @@ double updown;
 double ougigataniagaruyatu;
 double nobiruyatu;
 
-void modules();
+//void modules();
 
 static uint32_t gUpdateDate = 0;
 static uint32_t gSentDate = 0;
@@ -365,7 +378,7 @@ int main() {
       double turn = joyRxValue * -1;
 
       // Joystickのベクトル化
-      double joySpeed = sqrt(joyLxValue * joyLxValue + joyLyValue * joyLyValue);
+      double joySpeed    = sqrt(joyLxValue * joyLxValue + joyLyValue * joyLyValue);
       double joyRotation = atan2(joyLyValue, joyLxValue) - (PI / 4);
 
       // targetSpeedが1,-1を超えないようにする
@@ -400,36 +413,58 @@ int main() {
       ougigataniagaruyatu = (lc_up - lc_down) * 0.7;
       nobiruyatu = (lc_left - lc_right) * 3.5;
 
+      // kyata
+      c_1 = joyL2Value;
+      c_2 = joyR2Value;
+
+      if(joyL1Value){
+        c_1 *= -1;
+      }
+
+      if(joyR1Value){
+        c_2 *= -1;
+      }
+
+      sc0.set_target(mw.getSpeed(3));
+      sc1.set_target(mw.getSpeed(2));
+      sc2.set_target(mw.getSpeed(1));
+      sc3.set_target(mw.getSpeed(0));
+
+      sc4.set_target(c_1);
+      sc5.set_target(c_2);
+
+      sc6.set_target(ougigataniagaruyatu);
+      sc7.set_target(updown);
       
-      servo->drive((square - circle) * 50);
-      
+      servo.drive((square - circle) * 50);
 
-      sc[0]->set_target(mw.getSpeed(3));
-      sc[1]->set_target(mw.getSpeed(2));
-      sc[2]->set_target(mw.getSpeed(1));
-      sc[3]->set_target(mw.getSpeed(0));
+      // Azusa0 送信
 
-      sc[4]->set_target(joyL2Value);
-      sc[5]->set_target(joyR2Value);
+      // メカナム
+      mdc_client.set_target(0, sc0.step());
+      mdc_client.set_target(1, sc1.step());
+      mdc_client.set_target(2, sc2.step());
+      mdc_client.set_target(3, sc3.step());
 
-      sc[6]->set_target(ougigataniagaruyatu);
-      sc[7]->set_target(updown);
+      // Azusa1 送信
 
-      mdc_client.set_target(0, sc[0]->step());
-      mdc_client.set_target(1, sc[1]->step());
-      mdc_client.set_target(2, sc[2]->step());
-      mdc_client.set_target(3, sc[3]->step());
+      // キャタピラ
+      mdc_client_2.set_target(0,sc4.step());
+      mdc_client_2.set_target(1,sc5.step());
 
-      mdc_client_2.set_target(0, sc[4]->step());
-      mdc_client_2.set_target(1, sc[5]->step());
-      mdc_client_2.set_target(2, sc[6]->step());
-      mdc_client_2.set_target(3, sc[7]->step());
+      //  仰角
+      mdc_client_2.set_target(2, sc6.step());
+      //  台形ネジ
+      mdc_client_2.set_target(3, sc7.step());
 
-      md[0]->drive(nobiruyatu);
+      //  伸びるやつ(目視確認)
+      md.drive(nobiruyatu);
 
+      //  send messages
       mdc_client.send_target();
       mdc_client_2.send_target();
-      */
+
+      
     }
 
     serial.update();
@@ -439,15 +474,18 @@ int main() {
   }
 }
 
+
+/*
+
 void modules() {
 
-  // 台形加速
+   台形加速
   sc[0] = new SpeedController(0.01, 0.2);
   sc[1] = new SpeedController(0.01, 0.2);
   sc[2] = new SpeedController(0.01, 0.2);
   sc[3] = new SpeedController(0.01, 0.2);
-  sc[4] = new SpeedController(0.01, 0.2);
-  sc[5] = new SpeedController(0.01, 0.2);
+  sc[4] = new SpeedController(0.01, 0.02);
+  sc[5] = new SpeedController(0.01, 0.02);
   sc[6] = new SpeedController(0.1, 0.2);
   sc[7] = new SpeedController(0.1, 0.2);
 
@@ -493,3 +531,5 @@ void modules() {
   // servo (PWMピン, 逆転モード)
   servo = new Servo(PB_2, false);
 };
+
+ */
