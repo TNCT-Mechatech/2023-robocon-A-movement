@@ -37,10 +37,10 @@ public:
       }
       else if((_target - _feedback) > 0)
       {
-          _feedback += _num;
+          _feedback += _increment;
       }
       else {
-          _feedback -= _num;
+          _feedback -= _increment;
       }
 
       return _feedback;
