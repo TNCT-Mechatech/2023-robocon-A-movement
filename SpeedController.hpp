@@ -32,7 +32,7 @@ public:
 
   double step()
   {
-      if (abs(_target - _feedback) < _width) {
+      if (std::abs(_target - _feedback) < _width) {
           _feedback = _target;
       }
       else if((_target - _feedback) > 0)
