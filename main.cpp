@@ -13,22 +13,23 @@
 #include "CANSerialBridge.hpp"
 #include "MbedHardwareSPI.h"
 
-#include "Controller.hpp"
-#include "DebugMessage.hpp"
-#include "MovementFeedback.hpp"
-#include "PIDGain.hpp"
 #include "MbedHardwareSerial.hpp"
 #include "SerialBridge.hpp"
+#include "Controller.hpp"
+
+#include "MovementFeedback.hpp"
+#include "DebugMessage.hpp"
 
 #include "mdc_client/MDCClient.hpp"
 
 #include "Mecanum.hpp"
 #include "Servo.hpp"
 #include "SpeedController.hpp"
+#include "md.hpp"
 
-#include "MD.hpp"
-//#include "Encoder.hpp"
-//#include "PID.hpp"
+//  #include "Encoder.hpp"
+ #include "PIDGain.hpp"
+//  #include "PID.hpp"
 
 Timer timer;
 double pre_timer = 0.01;
@@ -73,15 +74,15 @@ DigitalOut led(PA_5);
 MecanumWheel mw;
 
 //台形加速
-SpeedController sc0(0.01, 0.05);
-SpeedController sc1(0.01, 0.05);
-SpeedController sc2(0.01, 0.05);
-SpeedController sc3(0.01, 0.05);
+SpeedController sc0(0.1, 0.2);
+SpeedController sc1(0.1, 0.2);
+SpeedController sc2(0.1, 0.2);
+SpeedController sc3(0.1, 0.2);
 SpeedController sc4(0.2,  0.3);
 SpeedController sc5(0.2,  0.3);
 SpeedController sc6(0.1,  0.2);
-SpeedController sc7(0.1,  0.2);
-SpeedController sc8(0.1,  0.2);
+SpeedController sc7(0.05,  0.2);
+SpeedController sc8(0.2,  0.4);
 
 //MD *md[4];
 //Encoder *encoder[3];
@@ -89,19 +90,22 @@ SpeedController sc8(0.1,  0.2);
 //PID::ctrl_variable_t v_vel[3];
 //PID *pid[3];
 
-Servo servo(PB_2, false);
-MD md(PC_9, PC_5, 1.0, false);
+Servo servo(PB_6,  false);
+Servo servo2(PB_0, false);
+// MD md1(PA_0, PA_1, false);
+
+PwmOut md_pwm(PA_0);
+DigitalOut md_dir(PA_1);
 
 //Servo *servo;
 //SpeedController *sc[8];
 setting_struct_t *mdc_settings[8];
 
 double c_1, c_2;
+int s;
 double updown;
 double ougigataniagaruyatu;
 double nobiruyatu;
-
-//void modules();
 
 static uint32_t gUpdateDate = 0;
 static uint32_t gSentDate = 0;
@@ -152,7 +156,9 @@ int main() {
 
   printf("all configuration completed!\n\r");
 
-  void modules();
+  // void modules();
+
+  md_pwm.period(0.0005);
 
   setting_struct_t mdc_settings[8] = {
     //  Azure 0 -> no.0
@@ -278,6 +284,7 @@ int main() {
 
     dev0_can.poll();
 
+    /*
     if (pid_gain_msg.was_updated()) {
       uint8_t id = pid_gain_msg.data.id;
       if (0 <= id && id < 8) {
@@ -299,8 +306,10 @@ int main() {
         serial_control.write(10);
       }
     }
+    */
 
     if (mdc_client.update()) {
+      /*
       //  set target value
       movement_feedback_msg[0].data.target.a = mw.getSpeed(3);
       movement_feedback_msg[0].data.target.b = mw.getSpeed(2);
@@ -315,12 +324,14 @@ int main() {
 
       //  send
       serial_control.write(1);
+      */
 
       //  toggle led
       toggleAcknowledge();
     }
 
     if (mdc_client_2.update()) {
+      /*
       //  set target value
       movement_feedback_msg[1].data.target.a = c_1;
       movement_feedback_msg[1].data.target.b = c_2;
@@ -335,6 +346,7 @@ int main() {
 
       //  send
       serial_control.write(2);
+      */
 
       //  toggle led
       toggleAcknowledge();
@@ -344,11 +356,7 @@ int main() {
 
       led = !led;
 
-      // DEBUG
-      memset(debug_msg.data.str, 0, 64);
-      sprintf(debug_msg.data.str, "0");
-      serial_control.write(10);
-
+    
       // Joystickの値を取得
 
       double joyLxValue = msc.data.Lx;
@@ -405,7 +413,7 @@ int main() {
 
       // 上部周り(ougigataniagaruyatuは角度制御してもよし)
       ougigataniagaruyatu = ((lc_up * 0.15) - (lc_down * 0.1));
-      nobiruyatu = (lc_left - lc_right) * 0.1;
+      nobiruyatu = (lc_left - lc_right) * 0.3;
 
       // キャタピラ
       c_1 = joyL2Value;
@@ -421,7 +429,21 @@ int main() {
       }
 
       // サーボ(手) numは50~500くらいが無難
-      servo.drive((square - circle) * 50);
+      if(square){
+        s = 50;
+      } else if (circle){
+        s = -50;
+      } else{
+        s = 0;
+      }
+
+      servo.drive(s);
+      servo2.drive(s);
+
+      // DEBUG
+       memset(debug_msg.data.str, 0, 64);
+       sprintf(debug_msg.data.str, "%d",s);
+       serial_control.write(10);
 
       // 台形加速
       sc0.set_target(mw.getSpeed(3));
@@ -434,6 +456,8 @@ int main() {
 
       sc6.set_target(ougigataniagaruyatu);
       sc7.set_target(updown);
+
+      sc8.set_target(nobiruyatu);
 
 
       // Azusa[0] 送信値設定
@@ -460,11 +484,28 @@ int main() {
       // mdc_client_2.set_target(2, sc6.step());
 
       //  上部展開[台形ネジ]
-      mdc_client_2.set_target(3, updown);
-      // mdc_client_2.set_target(3, sc7.step());
+      // mdc_client_2.set_target(3, updown);
+      mdc_client_2.set_target(3, sc7.step());
 
       //  伸びるやつ
-      md.drive(nobiruyatu);
+      // md1.drive(nobiruyatu);
+      // md.drive(sc8.step());
+
+
+      
+      
+      if(nobiruyatu > 0){
+        md_dir = 1;
+        md_pwm = nobiruyatu;
+      }else {
+        md_dir = 0;
+        md_pwm = nobiruyatu * -1;
+      }
+
+      // DEBUG
+      // memset(debug_msg.data.str, 0, 64);
+      // sprintf(debug_msg.data.str, "%.4lf",nobiruyatu );
+      // serial_control.write(10);
 
       //  Azusa 送信
       mdc_client.send_target();

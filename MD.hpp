@@ -6,24 +6,34 @@
 
 class MD
 {
-public:
-    MD(PinName pwm, PinName dir, double max_duty = 1.0, bool default_dir = false);
+    public:
+    MD(PinName pwm_pin, PinName dir_pin, bool reverse)
+    : pwm(pwm_pin), dir(dir_pin), reverse(reverse)  //(pwmピン, dirピン, 逆転モード)
+    {
+        pwm.period(0.0005);
+    };
     
-    /**
-     * Drive md
-     * @params power
-     */
-    void drive(double power);
-    
-private:
-    //  GPIO
-    PwmOut _pwm;
-    DigitalOut _dir;
+    int getdir()
+    {
+        return dir;
+    }
 
-    //  duty limit
-    double _max_duty;
-    
-    //  default dir
-    bool _default_dir;
+    void drive(float power)
+    {   
+        if(reverse){
+            power *= -1;
+        }
+
+        dir = power < 0 ? 0 : 1;
+        pwm = abs(power) > 1 ? 1.0 : abs(power);
+        // a ? b : c aが真ならbが実行、aが偽ならcが実行。
+        
+    }
+
+    private:
+        PwmOut pwm;
+        DigitalOut dir;
+        bool reverse;
 };
+
 #endif

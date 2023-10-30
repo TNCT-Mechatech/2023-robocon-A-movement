@@ -16,7 +16,9 @@ public:
   Servo(PinName Servo_pin, bool reverse)
     : servo(Servo_pin), reverse(reverse), _servo(0)
   {
-    servo.period(0.02);
+    servo.period(1.0 / 100.0);
+    servo.pulsewidth_us(800);
+    _servo = 800;
   }
 
 // num分足す 高い値入れたらダメ
@@ -30,6 +32,8 @@ public:
     }
 
     // printf("servo_ = %d\n\r",_servo);
+
+    
 
     if(_servo > (2500)){
       _servo = (2500);
