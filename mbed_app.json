@@ -5,6 +5,11 @@
             "macro_name": "MBED",
             "value": 0
         },
+        "mbed_acan2517fd": {
+            "help": "Macro",
+            "macro_name": "MBED_SB",
+            "value": 0
+        },
         "sb_canfd": {
             "help": "Macro",
             "macro_name": "SB_CANFD",
